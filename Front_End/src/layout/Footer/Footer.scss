@@ -1,0 +1,60 @@
+.footer {
+  background: #f3fbfe;
+  padding: 40px 0;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  .footer__container {
+    display: flex;
+    justify-content: space-between;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: 32px;
+  }
+  .footer__column {
+    flex: 1;
+    min-width: 220px;
+  }
+  .footer__title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #0a2259;
+    margin-bottom: 16px;
+  }
+  .footer__subtitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0a2259;
+    margin-bottom: 12px;
+  }
+  .footer__info {
+    color: #7d8592;
+    font-size: 1rem;
+    .footer__info-item {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+  .footer__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: #7d8592;
+    font-size: 1rem;
+    li {
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: color 0.2s;
+      &:hover {
+        color: #0085db;
+      }
+    }
+  }
+  .footer__fanpage {
+    margin-top: 8px;
+    iframe {
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+  }
+}

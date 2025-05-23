@@ -1,0 +1,43 @@
+.vnpay-checkout {
+  max-width: 480px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  padding: 32px 24px;
+  text-align: center;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #c92127;
+    margin-bottom: 24px;
+  }
+
+  > div {
+    margin-bottom: 24px;
+    text-align: left;
+    font-size: 1.1rem;
+    color: #222;
+    line-height: 1.7;
+    b {
+      color: #333;
+    }
+  }
+
+  &__button {
+    background: #c92127;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding: 12px 36px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 12px;
+    &:hover {
+      background: #a81b22;
+    }
+  }
+}

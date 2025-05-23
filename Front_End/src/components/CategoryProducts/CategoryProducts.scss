@@ -1,0 +1,355 @@
+.category-products {
+  margin-bottom: 40px;
+  padding: 1rem 0;
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+  }
+
+  &.loading {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-left-color: #ff5722;
+      animation: spin 1s ease infinite;
+      margin: 30px auto;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  }
+
+  .category__header {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    transition: transform 0.3s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  .category-wrapper {
+ 
+background: #fff;
+  }
+
+  .category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 10px;
+
+    .category-title {
+      font-size: 1.6rem;
+      color: #333;
+      margin: 0;
+      position: relative;
+      padding-left: 15px;
+      font-weight: 600;
+
+      &:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        background: #ff5722;
+        border-radius: 2px;
+      }
+    }
+
+    .view-all-link {
+      color: #ff5722;
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      transition: transform 0.2s ease;
+
+      i {
+        margin-left: 5px;
+        font-size: 0.8rem;
+        transition: transform 0.3s ease;
+      }
+
+      &:hover {
+        transform: translateX(3px);
+
+        i {
+          transform: translateX(2px);
+        }
+      }
+    }
+  }
+
+  .products-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+    position: relative;
+
+    &:after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 80px;
+      background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9));
+      pointer-events: none;
+      z-index: 1;
+      display: none;
+    }
+
+    .product-card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      height: 100%;
+
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+
+        .product-image {
+          transform: scale(1.08);
+        }
+      }
+
+      .product-link {
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .product-image-container {
+        position: relative;
+        overflow: hidden;
+        height: 200px;
+        background-color: #f8f9fa;
+
+        .product-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.5s ease;
+        }
+
+        .discount-tag {
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: linear-gradient(135deg, #ff3a3a, #ff7b7b);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 0.8rem;
+          font-weight: bold;
+          box-shadow: 0 2px 5px rgba(255, 0, 0, 0.2);
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+      }
+
+      .product-info {
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        background: white;
+
+        .product-name {
+          font-size: 0.95rem;
+          margin: 0 0 10px;
+          font-weight: 500;
+          color: #333;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          line-height: 1.4;
+          height: 2.8em;
+        }
+
+        .product-price {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          margin-top: auto;
+
+          .current-price {
+            font-weight: bold;
+            color: #ff3a3a;
+            font-size: 1.1rem;
+          }
+
+          .old-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+.category-products-scroll {
+  .category__header {
+    padding: 15px;
+  }
+
+  .products-container {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 10px;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &:after {
+      display: block;
+    }
+
+    .product-card {
+      min-width: 200px;
+      scroll-snap-align: start;
+      flex: 0 0 auto;
+      width: calc(20% - 16px);
+      margin-right: 20px;
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
+}
+
+// Responsive styles
+@media (max-width: 1200px) {
+  .category-products {
+    .products-container {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  .category-products-scroll .products-container .product-card {
+    width: calc(25% - 15px);
+  }
+}
+
+@media (max-width: 992px) {
+  .category-products {
+    .products-container {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .category__header {
+      padding: 15px;
+    }
+  }
+
+  .category-products-scroll .products-container .product-card {
+    width: calc(33.33% - 14px);
+  }
+}
+
+@media (max-width: 768px) {
+  .category-products {
+    padding: 0.5rem 0;
+
+    .products-container {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .category-header {
+      .category-title {
+        font-size: 1.3rem;
+      }
+    }
+
+    .category__header {
+      padding: 12px;
+    }
+  }
+
+  .category-products-scroll .products-container .product-card {
+    width: calc(50% - 10px);
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .category-products {
+    .category__header {
+      padding: 10px;
+    }
+
+    .products-container {
+      gap: 10px;
+
+      .product-card {
+        .product-image-container {
+          height: 160px;
+        }
+
+        .product-info {
+          padding: 10px;
+
+          .product-name {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+          }
+
+          .product-price {
+            .current-price {
+              font-size: 1rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}

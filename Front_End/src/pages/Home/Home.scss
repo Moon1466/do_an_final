@@ -1,0 +1,87 @@
+.home {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  overflow-x: hidden;
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+}
+
+// Featured section styles
+.featured-section {
+  padding: 2rem 0;
+
+  .section-header {
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    h2 {
+      font-size: 1.6rem;
+      color: #333;
+      margin: 0;
+      position: relative;
+      padding-left: 1rem;
+
+      &:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        background: #ff5722;
+        border-radius: 2px;
+      }
+    }
+
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to right, #ddd 0%, transparent 100%);
+      margin-left: 1rem;
+    }
+  }
+}
+
+// Custom scrollbar for the page
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+  .featured-section {
+    padding: 1.5rem 0;
+
+    .section-header {
+      h2 {
+        font-size: 1.4rem;
+      }
+    }
+  }
+
+  .home {
+    padding-bottom: 2rem;
+  }
+}

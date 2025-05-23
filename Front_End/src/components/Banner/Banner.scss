@@ -1,0 +1,114 @@
+.main-banner {
+  position: relative;
+  margin-top: 40px;
+  width: 100%;
+  height: auto;
+  margin-bottom: 2rem;
+
+  .banner-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+
+    &:hover .banner-image {
+      transform: scale(1.01);
+    }
+  }
+
+  .banner-image {
+    width: 1080px;
+    height: 250px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 0;
+    transition: transform 0.3s ease;
+  }
+
+  .banner-search-container {
+    position: absolute;
+    bottom: 30px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+
+    .search-wrapper {
+      width: 80%;
+      max-width: 600px;
+      position: relative;
+
+      .search-input {
+        width: 100%;
+        padding: 15px 20px;
+        border-radius: 30px;
+        border: none;
+        font-size: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+        &:focus {
+          outline: none;
+        }
+      }
+
+      .search-button {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: #ff5722;
+        color: white;
+        border: none;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.3s;
+
+        &:hover {
+          background: #e64a19;
+        }
+      }
+    }
+  }
+}
+
+// Responsive styles
+@media (max-width: 992px) {
+  .main-banner {
+    .banner-image {
+      height: 400px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .main-banner {
+    .banner-image {
+      height: 300px;
+    }
+
+    .banner-search-container {
+      position: relative;
+      bottom: 0;
+      margin-top: -30px;
+
+      .search-wrapper {
+        width: 90%;
+
+        .search-input {
+          padding: 12px 15px;
+        }
+
+        .search-button {
+          width: 40px;
+          height: 40px;
+        }
+      }
+    }
+  }
+}

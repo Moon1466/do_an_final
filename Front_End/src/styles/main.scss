@@ -1,0 +1,33 @@
+*{
+  box-sizing: border-box;
+}
+
+html{
+  font-size: 62.5%;
+}
+
+body {
+  background: #f0f0f0;
+
+  font-family: "Inter", sans-serif;
+}
+
+main {
+  padding-top: 60px;
+}
+
+a {
+  text-decoration: none;
+  
+}
+
+input {
+  border: none;
+  outline: none;
+}
+
+button {
+  border: none;
+  outline: none;
+  background: none;
+}
