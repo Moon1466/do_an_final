@@ -60,6 +60,7 @@ const Header = () => {
     e.preventDefault();
     if (searchTerm.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
+      setSearchTerm(searchTerm.trim());
     }
   };
 

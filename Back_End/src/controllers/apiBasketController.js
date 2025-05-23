@@ -17,10 +17,35 @@ exports.addToBasket = async (req, res) => {
       sale 
     } = req.body;
 
-    console.log("Body nhận được:", req.body);
-    console.log("userId:", userId, "userName:", userName, "userAvatar:", userAvatar);
+    // Kiểm tra tồn kho trước khi thêm/cập nhật
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy sản phẩm' 
+      });
+    }
 
     let basket = await Basket.findOne({ userId });
+
+    // Tính toán số lượng mới
+    let newQuantity = quantity;
+    if (basket) {
+      const existingItem = basket.items.find(
+        item => item.productId.toString() === productId
+      );
+      if (existingItem) {
+        newQuantity += existingItem.quantity;
+      }
+    }
+
+    // Kiểm tra nếu vượt quá tồn kho
+    if (newQuantity > product.stock) {
+      return res.status(400).json({
+        success: false,
+        message: `Số lượng đặt hàng (${newQuantity}) đã vượt quá tồn kho (${product.stock} sản phẩm)`
+      });
+    }
 
     if (!basket) {
       // Nếu chưa có giỏ, tạo mới
@@ -35,15 +60,19 @@ exports.addToBasket = async (req, res) => {
           quantity,
           price,
           isSale,
-          sale
+          sale,
+          stock: product.stock // Thêm thông tin stock
         }]
       });
     } else {
       // Nếu đã có giỏ, kiểm tra sản phẩm đã có chưa
-      const itemIndex = basket.items.findIndex(item => item.productId.toString() === productId);
+      const itemIndex = basket.items.findIndex(
+        item => item.productId.toString() === productId
+      );
       if (itemIndex > -1) {
         // Nếu đã có, cập nhật số lượng
-        basket.items[itemIndex].quantity += quantity;
+        basket.items[itemIndex].quantity = newQuantity;
+        basket.items[itemIndex].stock = product.stock; // Cập nhật stock
       } else {
         // Nếu chưa có, thêm mới
         basket.items.push({
@@ -53,7 +82,8 @@ exports.addToBasket = async (req, res) => {
           quantity,
           price,
           isSale,
-          sale
+          sale,
+          stock: product.stock // Thêm thông tin stock
         });
       }
     }
@@ -61,6 +91,7 @@ exports.addToBasket = async (req, res) => {
     await basket.save();
     res.json({ success: true, data: basket });
   } catch (err) {
+    console.error('Error adding to basket:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -118,5 +149,61 @@ exports.removeFromBasket = async (req, res) => {
     res.json({ success: true, data: basket });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Thêm route mới để update số lượng
+exports.updateQuantity = async (req, res) => {
+  try {
+    const { userId, productId, quantity } = req.body;
+
+    // Kiểm tra tồn kho
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy sản phẩm'
+      });
+    }
+
+    // Kiểm tra số lượng tồn kho và trả về warning thay vì error
+    if (quantity > product.stock) {
+      return res.json({
+        success: false,
+        isWarning: true, // Thêm flag để frontend biết đây là warning
+        message: `Không thể thêm quá số lượng tồn kho (${product.stock} sản phẩm)`
+      });
+    }
+
+    // Cập nhật số lượng trong giỏ hàng
+    const updatedBasket = await Basket.findOneAndUpdate(
+      { 
+        userId, 
+        'items.productId': productId 
+      },
+      {
+        $set: { 'items.$.quantity': quantity }
+      },
+      { new: true }
+    );
+
+    if (!updatedBasket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy giỏ hàng hoặc sản phẩm trong giỏ'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: updatedBasket
+    });
+
+  } catch (err) {
+    console.error('Error updating quantity:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Có lỗi xảy ra khi cập nhật số lượng'
+    });
   }
 };

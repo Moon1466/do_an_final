@@ -19,10 +19,14 @@ const getProductComments = async (req, res) => {
       if (Array.isArray(c.reviews)) {
         c.reviews.forEach(r => {
           allReviews.push({
+            _id: r._id.toString(), // Convert ObjectId to string
+            commentId: c._id.toString(), // Thêm commentId để tham chiếu đến document cha
             userName: c.userInfo?.name || 'Ẩn danh',
             rating: r.rating,
             comment: r.comment,
-            createdAt: r.createdAt
+            createdAt: r.createdAt,
+            likedBy: r.likedBy || [],
+            likes: (r.likedBy || []).length
           });
         });
       }
@@ -132,49 +136,69 @@ const addProductComment = async (req, res) => {
 // API: Thích hoặc bỏ thích một review
 const toggleReviewLike = async (req, res) => {
   try {
-    const { commentId, reviewId } = req.params; // Lấy IDs từ URL params
-    const { userId } = req.body; // Lấy user ID (email) từ body
+    const { userId } = req.body;
+    const { productId, reviewId } = req.params;
 
-    console.log('--- LOG toggleReviewLike ---');
-    console.log('commentId:', commentId);
-    console.log('reviewId:', reviewId);
-    console.log('userId (email):', userId);
+    console.log('Toggle like request:', { userId, productId, reviewId });
 
-    // Kiểm tra tính hợp lệ của IDs
-    if (!mongoose.Types.ObjectId.isValid(commentId) || !mongoose.Types.ObjectId.isValid(reviewId)) {
-      return res.status(400).json({ success: false, message: 'IDs bình luận hoặc review không hợp lệ' });
+    if (!userId || !reviewId || !productId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Thiếu thông tin cần thiết" 
+      });
     }
 
-    // Tìm người dùng bằng email để lấy ObjectId
-    const userAccount = await Account.findOne({ email: userId });
-    if (!userAccount) {
-      console.error('Không tìm thấy user với email:', userId);
-      return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin người dùng.' });
+    // Tìm tất cả comments của sản phẩm
+    const comments = await Comment.find({ product: productId });
+    let foundReview = null;
+    let foundComment = null;
+
+    // Tìm review trong tất cả comments
+    for (const comment of comments) {
+      const review = comment.reviews.id(reviewId);
+      if (review) {
+        foundReview = review;
+        foundComment = comment;
+        break;
+      }
     }
 
-    // Tìm comment theo ID
-    const comment = await Comment.findById(commentId);
-
-    if (!comment) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy bình luận' });
+    if (!foundReview || !foundComment) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Không tìm thấy đánh giá" 
+      });
     }
 
-    // Sử dụng phương thức toggleLikeReview từ schema
-    await comment.toggleLikeReview(reviewId, userAccount._id);
+    // Khởi tạo mảng likedBy nếu chưa có
+    if (!foundReview.likedBy) {
+      foundReview.likedBy = [];
+    }
 
-    // Tìm lại comment để lấy số lượng like mới nhất sau khi save
-    const updatedComment = await Comment.findById(commentId);
-    const updatedReview = updatedComment.reviews.id(reviewId);
+    const userLikedIndex = foundReview.likedBy.indexOf(userId);
+    const isLiked = userLikedIndex === -1;
 
-    res.json({
+    if (isLiked) {
+      foundReview.likedBy.push(userId);
+    } else {
+      foundReview.likedBy.splice(userLikedIndex, 1);
+    }
+
+    await foundComment.save();
+
+    return res.json({
       success: true,
-      message: 'Cập nhật trạng thái thích thành công',
-      likesCount: updatedReview.likes // Trả về số lượng like mới nhất
+      message: isLiked ? "Đã thích bình luận" : "Đã bỏ thích bình luận",
+      likesCount: foundReview.likedBy.length,
+      isLiked
     });
-
   } catch (err) {
-    console.error('Lỗi trong toggleReviewLike:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật trạng thái thích', error: err.message });
+    console.error('Toggle like error:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Lỗi server",
+      error: err.message 
+    });
   }
 };
 

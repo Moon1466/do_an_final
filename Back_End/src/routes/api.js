@@ -84,13 +84,14 @@ routerAPI.post('/orders/update-all-paid', apiOrderController.updateAllPaidOrders
 // ------------ Comment ------------------- //
 routerAPI.get('/comments/:productId', apiCommentController.getProductComments);
 routerAPI.post('/comments/:productId', apiCommentController.addProductComment);
-// Route để thích/bỏ thích một review cụ thể trong một comment
-routerAPI.put('/comments/:commentId/reviews/:reviewId/like', apiCommentController.toggleReviewLike);
+// Sửa lại route like để khớp với controller
+routerAPI.put('/comments/:productId/reviews/:reviewId/like', apiCommentController.toggleReviewLike);
 
 // ------------ Basket ------------------- //
 routerAPI.post('/basket/add', basketController.addToBasket);
 routerAPI.get('/basket/:userId', basketController.getBasket);
 routerAPI.delete('/basket/:userId/:productId', basketController.removeFromBasket);
+routerAPI.post('/basket/update-quantity', basketController.updateQuantity); // Thêm route mới
 
 // ------------ Setting ------------------- //
 routerAPI.post('/setting/update', upload.single('logo'), apiSettingController.updateSetting);

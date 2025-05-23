@@ -79,48 +79,48 @@ const Cart = () => {
 
     try {
       const user = JSON.parse(Cookies.get("user"));
-      const cartItem = cartItems.find((item) => item.productId === productId);
-
-      if (!cartItem) {
-        console.error("Không tìm thấy sản phẩm trong giỏ hàng");
+      if (!user) {
+        toast.error("Vui lòng đăng nhập để thực hiện thao tác này");
         return;
       }
 
-      // Tạo một bản sao của cartItems để cập nhật UI ngay lập tức
-      const updatedItems = cartItems.map(item => {
-        if (item.productId === productId) {
-          return {
-            ...item,
-            quantity: newQuantity
-          };
-        }
-        return item;
-      });
+      const currentItem = cartItems.find(item => item.productId === productId);
+      if (!currentItem) {
+        toast.error("Không tìm thấy sản phẩm trong giỏ hàng");
+        return;
+      }
 
-      // Cập nhật UI trước
+      // Kiểm tra số lượng tồn kho trước khi thực hiện bất kỳ thay đổi nào
+      if (newQuantity > currentItem.stock) {
+        toast.warning(`Không thể thêm quá số lượng tồn kho (${currentItem.stock} sản phẩm)`);
+        return; // Dừng hàm tại đây, không cập nhật UI hay gọi API
+      }
+
+      // Chỉ cập nhật UI và gọi API khi số lượng hợp lệ
+      const updatedItems = cartItems.map(item => 
+        item.productId === productId 
+          ? { ...item, quantity: newQuantity }
+          : item
+      );
       setCartItems(updatedItems);
 
-      const response = await axios.post("/api/basket/add", {
-        userId: user._id || user.username,
-        userName: user.name || user.fullName || user.username,
-        userAvatar: user.avatar,
-        productId: cartItem.productId,
-        productName: cartItem.productName,
-        productImage: cartItem.productImage,
-        quantity: newQuantity - cartItem.quantity,
-        price: cartItem.price,
-        isSale: cartItem.isSale,
-        sale: cartItem.sale
+      const response = await axios.post("/api/basket/update-quantity", {
+        userId: user._id,
+        productId: productId,
+        quantity: newQuantity
       });
 
       if (!response.data.success) {
+        toast.error(response.data.message);
+        // Rollback nếu API thất bại
         setCartItems(cartItems);
-        toast.error("Không thể cập nhật số lượng. Vui lòng thử lại sau.");
       }
+
     } catch (err) {
-      setCartItems(cartItems);
       console.error("Error updating quantity:", err);
       toast.error("Không thể cập nhật số lượng. Vui lòng thử lại sau.");
+      // Rollback nếu có lỗi
+      setCartItems(cartItems);
     }
   };
 
@@ -248,11 +248,28 @@ const Cart = () => {
                           <div className="cart-item__quantity">
                             <button
                               onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
-                              disabled={item.quantity <= 1}>
+                              disabled={item.quantity <= 1}
+                              className="cart-item__quantity-btn">
                               -
                             </button>
-                            <span>{item.quantity}</span>
-                            <button onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}>+</button>
+                            <input 
+                              type="number"
+                              value={item.quantity}
+                              min={1}
+                              max={item.stock}
+                              readOnly
+                              className="cart-item__quantity-input"
+                            />
+                            <button 
+                              onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
+                              disabled={item.quantity >= item.stock}
+                              style={{ 
+                                opacity: item.quantity >= item.stock ? 0.5 : 1,
+                                cursor: item.quantity >= item.stock ? 'not-allowed' : 'pointer'
+                              }}
+                              className="cart-item__quantity-btn">
+                              +
+                            </button>
                           </div>
                           <div className="cart-item__total">
                             {((item.isSale && item.sale > 0

@@ -295,4 +295,29 @@
       padding: 8px 0;
     }
   }
+
+  &-item {
+    &__quantity {
+      &-input {
+        width: 40px;
+        text-align: center;
+        border: none;
+        outline: none;
+        -moz-appearance: textfield;
+
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      }
+
+      &-btn {
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
 }

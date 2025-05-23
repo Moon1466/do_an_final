@@ -56,14 +56,30 @@ const Search = () => {
         setLoading(false);
       }
     };
-    const debounceTimer = setTimeout(fetchProducts, 400);
-    return () => clearTimeout(debounceTimer);
+
+    if (searchTerm) {
+      const debounceTimer = setTimeout(fetchProducts, 400);
+      return () => clearTimeout(debounceTimer);
+    }
   }, [searchTerm, selectedCategories, selectedPrice]);
 
+  // Sửa lại hàm handleSearch
   const handleSearch = (e) => {
     e.preventDefault();
-    setSearchParams({ q: searchTerm });
+    if (searchTerm.trim()) {
+      // Cập nhật searchParams và searchTerm
+      setSearchParams({ q: searchTerm.trim() });
+      setSearchTerm(searchTerm.trim());
+    }
   };
+
+  // Thêm useEffect để lắng nghe thay đổi từ URL
+  useEffect(() => {
+    const queryParam = searchParams.get("q");
+    if (queryParam) {
+      setSearchTerm(queryParam);
+    }
+  }, [searchParams]);
 
   const handleCategoryChange = (catId) => {
     setSelectedCategories((prev) => (prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]));

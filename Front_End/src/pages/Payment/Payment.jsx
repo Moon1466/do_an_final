@@ -27,7 +27,12 @@ const Payment = () => {
   const [agree, setAgree] = useState(true);
   const shippingFee = 35000;
   const [displayedCartItems, setDisplayedCartItems] = useState([]);
-  const subtotal = displayedCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = displayedCartItems.reduce((sum, item) => {
+    const priceAfterDiscount = item.isSale && item.sale > 0 
+      ? item.price * (1 - item.sale / 100)
+      : item.price;
+    return sum + (priceAfterDiscount * item.quantity);
+  }, 0);
   const total = subtotal + shippingFee;
 
   const [cities] = useState(provincesData);
@@ -222,9 +227,13 @@ const Payment = () => {
           products: displayedCartItems.map((item) => ({
             productId: item.productId,
             name: item.productName,
-            price: item.price,
+            price: item.isSale && item.sale > 0 
+              ? item.price * (1 - item.sale / 100)
+              : item.price,
             quantity: item.quantity,
             image: item.productImage,
+            originalPrice: item.price, // Thêm giá gốc nếu cần
+            discount: item.sale || 0  // Thêm phần trăm giảm giá nếu có
           })),
           totalAmount: total,
           paymentMethod: "Tiền mặt",
@@ -484,16 +493,34 @@ const Payment = () => {
                             <span className="payment-order-review__name">{item.productName}</span>
                           </td>
                           <td className="payment-order-review__price-cell">
-                            <span className="payment-order-review__price">{item.price.toLocaleString()} đ</span>
-                            {item.originPrice && (
-                              <div className="payment-order-review__origin-price">
-                                {item.originPrice.toLocaleString()} đ
+                            {item.isSale && item.sale > 0 ? (
+                              <div className="payment-order-review__price-wrapper">
+                                <span className="payment-order-review__price">
+                                  {(item.price * (1 - item.sale / 100)).toLocaleString()} đ
+                                </span>
+                                <div className="payment-order-review__price-detail">
+                                  <span className="payment-order-review__origin-price">
+                                    {item.price.toLocaleString()} đ
+                                  </span>
+                                  <span className="payment-order-review__discount-badge">
+                                    -{item.sale}%
+                                  </span>
+                                </div>
                               </div>
+                            ) : (
+                              <span className="payment-order-review__price">
+                                {item.price.toLocaleString()} đ
+                              </span>
                             )}
                           </td>
-                          <td className="payment-order-review__quantity-cell">{item.quantity}</td>
+                          <td className="payment-order-review__quantity-cell">
+                            {item.quantity}
+                          </td>
                           <td className="payment-order-review__total-cell">
-                            {(item.price * item.quantity).toLocaleString()} đ
+                            {(item.isSale && item.sale > 0
+                              ? item.price * (1 - item.sale / 100) * item.quantity
+                              : item.price * item.quantity
+                            ).toLocaleString()} đ
                           </td>
                         </tr>
                       ))}

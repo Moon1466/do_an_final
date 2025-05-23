@@ -6,6 +6,7 @@ import "./ProductDetail.scss";
 import Cookies from "js-cookie";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import AuthModal from "../../components/Modal/AuthModal";
 
 // Hàm để kiểm tra xem một chuỗi có phải là HTML hay không
 const isHTML = (str) => {
@@ -79,16 +80,25 @@ const ProductDetail = () => {
     }
   }, [quantity]);
 
+  // Thay thế state showLoginModal bằng state để quản lý AuthModal
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [actionAfterAuth, setActionAfterAuth] = useState(null); // 'add-to-cart' hoặc 'buy-now'
+
+  // Sửa lại hàm handleAddToCart
   const handleAddToCart = React.useCallback(async () => {
     let user = null;
     try {
       user = JSON.parse(Cookies.get("user"));
     } catch (e) {
-      toast.error("Không thể đọc thông tin người dùng. Vui lòng đăng nhập lại!");
+      // Hiển thị AuthModal thay vì tạo modal mới
+      setActionAfterAuth('add-to-cart');
+      setShowAuthModal(true);
       return;
     }
-    if (!user || !(user._id || user.username) || !(user.name || user.fullName) || !user.avatar) {
-      toast.error("Thiếu thông tin người dùng. Vui lòng đăng nhập lại!");
+    
+    if (!user || !(user._id || user.username)) {
+      setActionAfterAuth('add-to-cart');
+      setShowAuthModal(true);
       return;
     }
 
@@ -136,6 +146,66 @@ const ProductDetail = () => {
       toast.error("Lỗi khi thêm vào giỏ hàng: " + (error.response?.data?.message || error.message));
     }
   }, [product, quantity]);
+
+  // Sửa lại hàm handleBuyNow
+  const handleBuyNow = React.useCallback(() => {
+    let user = null;
+    try {
+      user = JSON.parse(Cookies.get("user"));
+    } catch (e) {
+      setActionAfterAuth('buy-now');
+      setShowAuthModal(true);
+      return;
+    }
+
+    if (!user || !(user._id || user.username)) {
+      setActionAfterAuth('buy-now');
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Nếu sản phẩm chưa có trong giỏ hàng, tiến hành thêm vào
+    try {
+      const apiUrl = "/api/basket/add";
+      const response = axios.post(apiUrl, {
+        userId: user._id || user.username,
+        userName: user.name || user.fullName || user.username,
+        userAvatar: user.avatar,
+        productId: product._id,
+        productName: product.name,
+        productImage: product.images[0],
+        quantity,
+        price: product.price,
+      });
+
+      // Chuyển hướng đến trang thanh toán với thông tin sản phẩm đã chọn
+      navigate("/payment", {
+        state: {
+          selectedItems: [{ productId: product._id, quantity }],
+        },
+      });
+    } catch (error) {
+      console.error("Lỗi khi thêm vào giỏ hàng:", error);
+      toast.error("Lỗi khi thêm vào giỏ hàng: " + (error.response?.data?.message || error.message));
+    }
+  }, [product, quantity, navigate]);
+
+  // Thêm hàm xử lý sau khi đăng nhập thành công
+  const handleAuthSuccess = (userData) => {
+    setShowAuthModal(false);
+    if (actionAfterAuth === 'add-to-cart') {
+      handleAddToCart();
+    } else if (actionAfterAuth === 'buy-now') {
+      handleBuyNow();
+    }
+    setActionAfterAuth(null);
+  };
+
+  // Thêm hàm đóng modal
+  const handleCloseAuth = () => {
+    setShowAuthModal(false);
+    setActionAfterAuth(null);
+  };
 
   // Memoize breadcrumbItems để tránh tính lại không cần thiết
   const breadcrumbItems = React.useMemo(() => {
@@ -227,21 +297,6 @@ const ProductDetail = () => {
       checkCanReview();
     }
   }, [id, slug]);
-
-  // Thêm hàm xử lý mua ngay
-  const handleBuyNow = () => {
-    if (!product || !product._id) return;
-    // Truyền productId và quantity sang trang Payment
-    const selectedItems = [{ productId: product._id, quantity }];
-    // Lưu vào sessionStorage để Payment.jsx lấy được
-    sessionStorage.setItem("selectedCartItems", JSON.stringify(selectedItems.map((item) => item.productId)));
-    sessionStorage.setItem("selectedCartItemsWithQuantity", JSON.stringify(selectedItems));
-    navigate("/payment", { state: { selectedItems: selectedItems.map((item) => item.productId) } });
-  };
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
-  if (!product) return <div>Product not found</div>;
 
   // Đặt ngoài cùng file và sử dụng React.memo để tránh render không cần thiết
   const ReviewModal = React.memo(
@@ -429,58 +484,87 @@ const ProductDetail = () => {
 
     // Thêm state để quản lý trạng thái loading của nút like
     const [loadingLike, setLoadingLike] = useState(false);
+    const [likedComments, setLikedComments] = useState(new Set());
 
     // Hàm xử lý thích/bỏ thích
-    const handleToggleLike = async (commentId, reviewId) => {
-      if (!isLoggedIn) {
-        toast.warning("Vui lòng đăng nhập để thích bình luận!");
-        return;
-      }
-
-      setLoadingLike(true);
-
+    const handleToggleLike = async (productId, reviewId) => {
       try {
         const user = JSON.parse(Cookies.get("user"));
-        if (!user || !user._id) {
-          toast.error("Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại!");
-          setLoadingLike(false);
+        if (!user || !user.email) {
+          toast.warning("Vui lòng đăng nhập để thích bình luận!");
           return;
         }
 
+        // Kiểm tra reviewId
+        if (!reviewId) {
+          toast.error("Không thể xác định bình luận");
+          return;
+        }
+
+        setLoadingLike(true);
+
+        // Log để debug
+        console.log('Sending like request:', {
+          productId,
+          reviewId,
+          userId: user.email
+        });
+
         const response = await axios.put(
-          `/api/comments/${commentId}/reviews/${reviewId}/like`,
-          { userId: user._id }, // Gửi userId trong body
+          `/api/comments/${productId}/reviews/${reviewId}/like`,
+          { userId: user.email },
           {
             headers: {
-              Authorization: `Bearer ${Cookies.get("token")}`,
-            },
+              Authorization: `Bearer ${Cookies.get("token")}`
+            }
           }
         );
 
         if (response.data.success) {
-          // Cập nhật state localReviews để hiển thị số like mới
-          // Cách tối ưu: Cập nhật trực tiếp review đó trong mảng
-          setLocalReviews((prevReviews) =>
-            prevReviews.map(
-              (r) =>
-                r._id === reviewId ? { ...r, likes: response.data.likesCount, likedBy: response.data.likedBy } : r // Cần backend trả về likedBy mới
-              // Note: Hiện tại backend API toggleLikeReview chỉ trả về likesCount, KHÔNG TRẢ VỀ MẢNG likedBy mới.
-              // Để cập nhật chính xác trạng thái nút thích, chúng ta cần refetch toàn bộ comments.
-              // Hoặc sửa backend để trả về mảng likedBy mới.
-              // Tạm thời refetch lại toàn bộ comments để đảm bảo đồng bộ.
-            )
+          setLocalReviews(prevReviews => 
+            prevReviews.map(review => {
+              if (review._id === reviewId) {
+                return {
+                  ...review,
+                  likes: response.data.likesCount,
+                  likedBy: response.data.isLiked 
+                    ? [...(review.likedBy || []), user.email]
+                    : (review.likedBy || []).filter(email => email !== user.email)
+                };
+              }
+              return review;
+            })
           );
-          // Refetch toàn bộ comments sau khi like/unlike thành công
-          fetchReviews(); // Gọi lại hàm fetchReviews đã định nghĩa trước đó
-        } else {
-          toast.error(response.data.message || "Cập nhật trạng thái thích thất bại");
+          
+          toast.success(response.data.message);
         }
       } catch (error) {
         console.error("Error toggling like:", error);
-        toast.error(error.response?.data?.message || "Lỗi khi cập nhật trạng thái thích");
+        toast.error("Không thể cập nhật trạng thái thích. Vui lòng thử lại sau.");
       } finally {
         setLoadingLike(false);
       }
+    };
+
+    // Thêm state để theo dõi tab đang active
+    const [activeTab, setActiveTab] = useState('newest'); // 'newest' hoặc 'mostLiked'
+    
+    // Tính toán danh sách reviews đã được sắp xếp
+    const sortedReviews = React.useMemo(() => {
+      if (activeTab === 'newest') {
+        return [...localReviews].sort((a, b) => 
+          new Date(b.createdAt) - new Date(a.createdAt)
+        );
+      } else {
+        return [...localReviews].sort((a, b) => 
+          (b.likedBy?.length || 0) - (a.likedBy?.length || 0)
+        );
+      }
+    }, [localReviews, activeTab]);
+
+    // Thêm handler cho việc click tab
+    const handleTabClick = (tab) => {
+      setActiveTab(tab);
     };
 
     return (
@@ -503,9 +587,31 @@ const ProductDetail = () => {
                     <span className="comment-rating__max">/5</span>
                   </div>
                   <div className="comment-rating__stars">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <img key={i} src="/src/assets/images/icon/star.svg" alt="" className="pd-dt-info__rating-star" />
-                    ))}
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const rating = parseFloat(avgRating);
+                      let percent = 0;
+                      if (star <= Math.floor(rating)) {
+                        percent = 100;
+                      } else if (star === Math.ceil(rating) && rating % 1 !== 0) {
+                        percent = (rating % 1) * 100;
+                      }
+                      return (
+                        <span
+                          key={star}
+                          style={{
+                            display: "inline-block",
+                            width: 24,
+                            height: 24,
+                            background: percent 
+                              ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)` 
+                              : "#ccc",
+                            WebkitMask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
+                            mask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
+                            marginRight: 2
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                   <span className="comment-rating__count">({localReviews.length} đánh giá)</span>
                 </div>
@@ -530,13 +636,17 @@ const ProductDetail = () => {
               <div className="comment-reviews">
                 {loadingCheck ? (
                   <span>Đang kiểm tra quyền bình luận...</span>
-                ) : canReview ? (
-                  <button className="comment-reviews__btn" onClick={handleOpenModal}>
-                    <img src="/src/assets/images/icon/edit.svg" alt="" />
-                    <span> Viết bình luận</span>
-                  </button>
+                ) : isLoggedIn ? (
+                  canReview ? (
+                    <button className="comment-reviews__btn" onClick={handleOpenModal}>
+                      <img src="/src/assets/images/icon/edit.svg" alt="" />
+                      <span> Viết bình luận</span>
+                    </button>
+                  ) : (
+                    <span className="comment-reviews__label">Bạn cần mua sản phẩm để được đánh giá</span>
+                  )
                 ) : (
-                  <span className="comment-reviews__label">Bạn cần mua sản phẩm để được đánh giá</span>
+                  <span className="comment-reviews__label">Bạn phải đăng nhập để đánh giá bình luận</span>
                 )}
               </div>
             </div>
@@ -545,14 +655,24 @@ const ProductDetail = () => {
               {/* Tabs */}
               <div className="comment__tabs">
                 <ul className="comment__list">
-                  <li className="comment__item comment__item--active">Mới nhất</li>
-                  <li className="comment__item">Yêu thích nhất</li>
+                  <li 
+                    className={`comment__item ${activeTab === 'newest' ? 'comment__item--active' : ''}`}
+                    onClick={() => handleTabClick('newest')}
+                  >
+                    Mới nhất
+                  </li>
+                  <li 
+                    className={`comment__item ${activeTab === 'mostLiked' ? 'comment__item--active' : ''}`}
+                    onClick={() => handleTabClick('mostLiked')}
+                  >
+                    Yêu thích nhất
+                  </li>
                 </ul>
               </div>
               {/* Content */}
               <div className="comment-content">
                 <ul className="comment-content__list">
-                  {localReviews.map((review, idx) => (
+                  {sortedReviews.map((review, idx) => (
                     <li className="comment-content__item" key={review._id || idx}>
                       <div className="comment-content__left">
                         {review.avatar ? (
@@ -573,11 +693,17 @@ const ProductDetail = () => {
                             <span
                               key={star}
                               style={{
-                                fontSize: 16,
-                                color: review.rating >= star ? "#FFD700" : "#ccc",
-                              }}>
-                              ★
-                            </span>
+                                display: "inline-block",
+                                width: 24,
+                                height: 24,
+                                background: star <= review.rating 
+                                  ? "#FFD700"  // Màu vàng cho sao được chọn
+                                  : "#ccc",    // Màu xám cho sao chưa chọn
+                                WebkitMask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
+                                mask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
+                                marginRight: 2
+                              }}
+                            />
                           ))}
                         </div>
                         <p className="comment-content__text">{review.comment}</p>
@@ -586,21 +712,21 @@ const ProductDetail = () => {
                           {isLoggedIn && (
                             <button
                               className={`like-button ${
-                                review.likedBy && review.likedBy.includes(JSON.parse(Cookies.get("user"))._id)
-                                  ? "liked"
-                                  : ""
+                                review.likedBy?.includes(JSON.parse(Cookies.get("user"))?.email) ? "liked" : ""
                               }`}
-                              onClick={() => handleToggleLike(review.commentId, review._id)}
-                              disabled={loadingLike}>
-                              {review.likedBy && review.likedBy.includes(JSON.parse(Cookies.get("user"))._id) ? (
-                                <i className="fas fa-heart"></i>
-                              ) : (
-                                <i className="far fa-heart"></i>
-                              )}
-                              <span>Thích</span>
+                              onClick={() => handleToggleLike(id, review._id)}
+                              disabled={loadingLike}
+                            >
+                              <img 
+                                src="/src/assets/images/icon/like.svg" 
+                                alt="Like"
+HayHay                                className={`like-icon ${
+                                  review.likedBy?.includes(JSON.parse(Cookies.get("user"))?.email) ? "liked" : ""
+                                }`}
+                              />
+                              <span className="like-count">{review.likedBy?.length || 0}</span>
                             </button>
                           )}
-                          <span className="like-count">{review.likes || 0}</span>
                         </div>
                       </div>
                     </li>
@@ -760,14 +886,12 @@ const ProductDetail = () => {
                     {/* Star */}
                     <div className="pd-dt-info__rating-stars">
                       {[1, 2, 3, 4, 5].map((star) => {
+                        const rating = parseFloat(productRating.avgRating);
                         let percent = 0;
-                        if (star <= Math.floor(productRating.avgRating)) {
+                        if (star <= Math.floor(rating)) {
                           percent = 100;
-                        } else if (
-                          star === Math.floor(productRating.avgRating) + 1 &&
-                          productRating.avgRating % 1 !== 0
-                        ) {
-                          percent = (productRating.avgRating % 1) * 100;
+                        } else if (star === Math.ceil(rating) && rating % 1 !== 0) {
+                          percent = (rating % 1) * 100;
                         }
                         return (
                           <span
@@ -776,12 +900,12 @@ const ProductDetail = () => {
                               display: "inline-block",
                               width: 24,
                               height: 24,
-                              background: percent
-                                ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)`
+                              background: percent 
+                                ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)` 
                                 : "#ccc",
                               WebkitMask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
                               mask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
-                              marginRight: 2,
+                              marginRight: 2
                             }}
                           />
                         );
@@ -799,44 +923,48 @@ const ProductDetail = () => {
                   {/* Price */}
                   <div className="pd-dt-info__price">
                     <div className="product-price">
-                      {/* Kiểm tra nếu có giảm giá */}
-                      {product.isSale && product.sale > 0 ? (
-                        <>
-                          {/* Hiển thị giá gốc bị gạch ngang */}
-                          <span
-                            className="original-price"
-                            style={{
-                              textDecoration: "line-through",
-                              color: "#888",
-                              marginRight: "10px",
-                              fontSize: "0.9em",
-                            }}>
-                            {product.price.toLocaleString("vi-VN")} đ
-                          </span>
-                          {/* Tính và hiển thị giá sau giảm giá */}
-                          <span
-                            className="discounted-price"
-                            style={{ fontWeight: "bold", color: "#e53935", fontSize: "1.2em" }}>
-                            {(product.price * (1 - product.sale / 100)).toLocaleString("vi-VN")} đ
-                          </span>
-                          {/* Hiển thị phần trăm giảm giá */}
-                          <span
-                            className="discount-badge"
-                            style={{
-                              marginLeft: "10px",
-                              backgroundColor: "#e53935",
-                              color: "white",
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              fontSize: "0.8em",
-                              fontWeight: "bold",
-                            }}>
-                            -{product.sale}%
-                          </span>
-                        </>
+                      {product ? ( // Kiểm tra product có tồn tại không
+                        product.isSale && product.sale > 0 ? (
+                          <>
+                            {/* Hiển thị giá gốc bị gạch ngang */}
+                            <span
+                              className="original-price"
+                              style={{
+                                textDecoration: "line-through",
+                                color: "#888",
+                                marginRight: "10px",
+                                fontSize: "0.9em",
+                              }}>
+                              {product.price.toLocaleString("vi-VN")} đ
+                            </span>
+                            {/* Tính và hiển thị giá sau giảm giá */}
+                            <span
+                              className="discounted-price"
+                              style={{ fontWeight: "bold", color: "#e53935", fontSize: "1.2em" }}>
+                              {(product.price * (1 - product.sale / 100)).toLocaleString("vi-VN")} đ
+                            </span>
+                            {/* Hiển thị phần trăm giảm giá */}
+                            <span
+                              className="discount-badge"
+                              style={{
+                                marginLeft: "10px",
+                                backgroundColor: "#e53935",
+                                color: "white",
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                fontSize: "0.8em",
+                                fontWeight: "bold",
+                              }}>
+                              -{product.sale}%
+                            </span>
+                          </>
+                        ) : (
+                          // Nếu không có giảm giá, hiển thị giá gốc
+                          <span className="current-price">{product.price.toLocaleString("vi-VN")} đ</span>
+                        )
                       ) : (
-                        // Nếu không có giảm giá, hiển thị giá gốc
-                        <span className="current-price">{product.price.toLocaleString("vi-VN")} đ</span>
+                        // Hiển thị loading hoặc placeholder khi product chưa load xong
+                        <span>Đang tải...</span>
                       )}
                     </div>
                   </div>
@@ -901,6 +1029,13 @@ const ProductDetail = () => {
       </div>
       {/* Tách biệt CommentSection thành một phần riêng biệt để tránh lỗi cấu trúc DOM */}
       <CommentSection id={id} canReview={canReview} loadingCheck={loadingCheck} onRatingUpdate={updateProductRating} />
+
+      {/* Thay thế modal cũ bằng AuthModal */}
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={handleCloseAuth}
+        onLoginSuccess={handleAuthSuccess}
+      />
     </div>
   );
 };

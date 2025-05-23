@@ -31,10 +31,10 @@ const commentSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     },
-    likedBy: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Account'
-    }]
+    likedBy: {  // Thay đổi từ Array ObjectId thành Array String
+      type: [String],  // Store email instead of ObjectId
+      default: []
+    }
   }],
   // Thông tin sản phẩm khi comment được tạo
   productInfo: {
