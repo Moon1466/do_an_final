@@ -20,7 +20,7 @@
           <div class="dashboard-sidebar__wrapper">
             <!-- Header -->
             <div class="dashboard-sidebar__header">
-              <img src="images/logo/logo.svg" alt="" class="dashboard-sidebar__img" />
+              <img src="images/logo/logo.svg" alt="Logo" class="dashboard-sidebar__img" />
             </div>
             <!-- Body -->
             <div class="dashboard-sidebar__body">
@@ -49,12 +49,14 @@
                     <span class="dashboard-sidebar__text">Thanh toán</span>
                   </a>
                 </li>
+                <% if (adminRole === 'admin') { %>
                 <li class="dashboard-sidebar__item">
                   <a href="/account" class="dashboard-sidebar__link">
                     <img src="images/icons/account.svg" alt="" class="dashboard-sidebar__icon" />
                     <span class="dashboard-sidebar__text">Tài khoản</span>
                   </a>
                 </li>
+                <% } %>
                 <li class="dashboard-sidebar__item">
                   <a href="/setting" class="dashboard-sidebar__link">
                     <img src="images/icons/setting.svg" alt="" class="dashboard-sidebar__icon" />
@@ -62,6 +64,18 @@
                   </a>
                 </li>
               </ul>
+            </div>
+            <!-- Footer Sidebar -->
+            <div class="dashboard-sidebar__footer" style="margin-top:auto; padding: 24px 0 12px 0; text-align:center;">
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <img src="<%= adminAvatar %>" alt="Admin Avatar" style="width:40px; height:40px; border-radius:50%; margin-bottom:4px;">
+                <div style="font-weight:600; font-size:16px;"><%= adminName %></div>
+                <form action="/logout" method="POST" style="margin-top:10px;">
+                  <button type="submit" class="btn-logout" style="margin-top:8px; padding:6px 18px; border-radius:6px; background:#f44336; color:#fff; border:none; cursor:pointer;">
+                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>

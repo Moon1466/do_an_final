@@ -46,10 +46,9 @@ const Cart = () => {
       const cartItem = cartItems.find((i) => i.productId === item);
       if (cartItem) {
         // Tính giá sau khi giảm nếu có giảm giá
-        const priceAfterDiscount = cartItem.isSale && cartItem.sale > 0 
-          ? cartItem.price * (1 - cartItem.sale / 100)
-          : cartItem.price;
-        return sum + (priceAfterDiscount * cartItem.quantity);
+        const priceAfterDiscount =
+          cartItem.isSale && cartItem.sale > 0 ? cartItem.price * (1 - cartItem.sale / 100) : cartItem.price;
+        return sum + priceAfterDiscount * cartItem.quantity;
       }
       return sum;
     }, 0);
@@ -84,7 +83,7 @@ const Cart = () => {
         return;
       }
 
-      const currentItem = cartItems.find(item => item.productId === productId);
+      const currentItem = cartItems.find((item) => item.productId === productId);
       if (!currentItem) {
         toast.error("Không tìm thấy sản phẩm trong giỏ hàng");
         return;
@@ -96,31 +95,28 @@ const Cart = () => {
         return; // Dừng hàm tại đây, không cập nhật UI hay gọi API
       }
 
-      // Chỉ cập nhật UI và gọi API khi số lượng hợp lệ
-      const updatedItems = cartItems.map(item => 
-        item.productId === productId 
-          ? { ...item, quantity: newQuantity }
-          : item
-      );
-      setCartItems(updatedItems);
-
+      // Thực hiện gọi API trước
       const response = await axios.post("/api/basket/update-quantity", {
         userId: user._id,
         productId: productId,
-        quantity: newQuantity
+        quantity: newQuantity,
       });
 
-      if (!response.data.success) {
+      if (response.data.success) {
+        // Nếu API thành công, cập nhật UI và hiển thị toast
+        const updatedItems = cartItems.map((item) =>
+          item.productId === productId ? { ...item, quantity: newQuantity } : item
+        );
+        setCartItems(updatedItems);
+       } else {
+        // Nếu API thất bại, chỉ hiển thị lỗi
         toast.error(response.data.message);
-        // Rollback nếu API thất bại
-        setCartItems(cartItems);
+        // Không cần rollback vì UI chưa được cập nhật trước đó
       }
-
     } catch (err) {
       console.error("Error updating quantity:", err);
       toast.error("Không thể cập nhật số lượng. Vui lòng thử lại sau.");
-      // Rollback nếu có lỗi
-      setCartItems(cartItems);
+      // Không cần rollback
     }
   };
 
@@ -137,6 +133,8 @@ const Cart = () => {
         setCartItems(response.data.data.items);
         setSelectedItems((prev) => prev.filter((id) => id !== productId));
         toast.success("Đã xóa sản phẩm khỏi giỏ hàng");
+        // Kích hoạt sự kiện để Header cập nhật giỏ hàng
+        document.dispatchEvent(new CustomEvent("cartUpdated"));
       }
     } catch (err) {
       console.error("Error removing item:", err);
@@ -252,7 +250,7 @@ const Cart = () => {
                               className="cart-item__quantity-btn">
                               -
                             </button>
-                            <input 
+                            <input
                               type="number"
                               value={item.quantity}
                               min={1}
@@ -260,21 +258,23 @@ const Cart = () => {
                               readOnly
                               className="cart-item__quantity-input"
                             />
-                            <button 
+                            <button
                               onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
                               disabled={item.quantity >= item.stock}
-                              style={{ 
+                              style={{
                                 opacity: item.quantity >= item.stock ? 0.5 : 1,
-                                cursor: item.quantity >= item.stock ? 'not-allowed' : 'pointer'
+                                cursor: item.quantity >= item.stock ? "not-allowed" : "pointer",
                               }}
                               className="cart-item__quantity-btn">
                               +
                             </button>
                           </div>
                           <div className="cart-item__total">
-                            {((item.isSale && item.sale > 0
-                              ? item.price * (1 - item.sale / 100)
-                              : item.price) * item.quantity).toLocaleString()} đ
+                            {(
+                              (item.isSale && item.sale > 0 ? item.price * (1 - item.sale / 100) : item.price) *
+                              item.quantity
+                            ).toLocaleString()}{" "}
+                            đ
                           </div>
                           <div className="cart-item__remove">
                             <button onClick={() => handleRemoveItem(item.productId)}>

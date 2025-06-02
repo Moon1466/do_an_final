@@ -4,6 +4,8 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import provincesData from "../../assets/vietnam_provinces.json";
 import { useNavigate, useLocation } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const Payment = () => {
   const [formData, setFormData] = useState({
@@ -41,6 +43,18 @@ const Payment = () => {
 
   const [addressError, setAddressError] = useState("");
 
+  const [formErrors, setFormErrors] = useState({
+    name: false,
+    phone: false,
+    city: false,
+    district: false,
+    ward: false,
+    details: false
+  });
+
+  // Thêm state để theo dõi lỗi số điện thoại
+  const [phoneError, setPhoneError] = useState("");
+
   const navigate = useNavigate();
   const location = useLocation();
   // Ưu tiên lấy selectedItems từ location.state, nếu không có thì lấy từ sessionStorage
@@ -54,12 +68,38 @@ const Payment = () => {
   console.log("Payment page - selectedItems from State:", selectedItemsFromState);
   console.log("Payment page - selectedItems from Session:", selectedItemsFromSession);
 
+  // Hàm validate số điện thoại Việt Nam
+  const validatePhoneNumber = (phone) => {
+    // Regex cho số điện thoại Việt Nam
+    const phoneRegex = /^(0|84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+    return phoneRegex.test(phone);
+  };
+
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
+    
+    if (id === 'phone') {
+      // Chỉ cho phép nhập số
+      const numericValue = value.replace(/[^\d]/g, '');
+      
+      // Cập nhật giá trị và validate
+      setFormData(prev => ({
+        ...prev,
+        [id]: numericValue
+      }));
+
+      // Kiểm tra và hiển thị lỗi số điện thoại
+      if (numericValue.length > 0 && !validatePhoneNumber(numericValue)) {
+        setPhoneError("Số điện thoại không hợp lệ");
+      } else {
+        setPhoneError("");
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [id]: value
+      }));
+    }
   };
 
   const handleSubmit = (e) => {
@@ -186,21 +226,45 @@ const Payment = () => {
   };
 
   const handleCheckout = async (e) => {
-    console.log("Bạn đã chọn phương thức thanh toán:", paymentMethod);
+    e.preventDefault();
+    let hasError = false;
+    
+    // Reset form errors
+    const newFormErrors = {
+      name: !formData.name,
+      phone: !formData.phone || !validatePhoneNumber(formData.phone),
+      city: !formData.city,
+      district: !formData.district,
+      ward: !formData.ward,
+      details: !formData.details
+    };
+    
+    setFormErrors(newFormErrors);
+
+    // Kiểm tra địa chỉ giao hàng
     if (!isAddressValid()) {
-      e.preventDefault();
-      setAddressError("Vui lòng điền đầy đủ thông tin địa chỉ giao hàng!");
+      toast.error("Vui lòng điền đầy đủ thông tin địa chỉ giao hàng!");
+      hasError = true;
+    }
+
+    // Kiểm tra số điện thoại
+    if (!validatePhoneNumber(formData.phone)) {
+      toast.error("Số điện thoại không hợp lệ!");
+      hasError = true;
+    }
+
+    if (!paymentMethod) {
+      toast.error("Vui lòng chọn phương thức thanh toán!");
+      hasError = true;
+    }
+
+    if (hasError) {
       return;
     }
     setAddressError("");
-    if (displayedCartItems.length === 0) {
-      alert("Không có sản phẩm nào để thanh toán.");
-      e.preventDefault();
-      return;
-    }
+ 
     if (paymentMethod === "vnpay") {
-      console.log("Chuyển hướng sang trang VNPAY!");
-      e.preventDefault();
+      toast.info("Đang chuyển hướng sang trang VNPAY...");
       navigate("/payment/vnpay-checkout", {
         state: {
           order: {
@@ -210,7 +274,6 @@ const Payment = () => {
         },
       });
     } else if (paymentMethod === "cash") {
-      e.preventDefault();
       try {
         // Lấy user từ cookie
         const user = JSON.parse(Cookies.get("user"));
@@ -245,6 +308,7 @@ const Payment = () => {
         const response = await axios.post("/api/orders/create", orderData);
 
         if (response.data.success) {
+          toast.success("Đặt hàng thành công!");
           // Xóa các sản phẩm đã thanh toán khỏi giỏ hàng
           const userId = user._id || user.username;
           for (const productId of selectedItems) {
@@ -266,7 +330,7 @@ const Payment = () => {
         }
       } catch (error) {
         console.error("Error creating order:", error);
-        alert("Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại sau.");
+        toast.error("Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại sau.");
       }
     }
   };
@@ -281,6 +345,18 @@ const Payment = () => {
 
   return (
     <div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <section className="payment">
         <div className="container">
           <form onSubmit={handleSubmit} className="payment-form">
@@ -298,7 +374,7 @@ const Payment = () => {
                     <input
                       type="text"
                       id="name"
-                      className="payment-address__input"
+                      className={`payment-address__input ${formErrors.name ? 'error' : ''}`}
                       value={formData.name}
                       onChange={handleInputChange}
                       required
@@ -312,11 +388,17 @@ const Payment = () => {
                     <input
                       type="tel"
                       id="phone"
-                      className="payment-address__input"
+                      className={`payment-address__input ${formErrors.phone || phoneError ? 'error' : ''}`}
                       value={formData.phone}
                       onChange={handleInputChange}
+                      placeholder="Nhập số điện thoại của bạn"
                       required
                     />
+                    {phoneError && (
+                      <span style={{ color: '#dc3545', fontSize: '1.2rem', marginTop: '4px' }}>
+                        {phoneError}
+                      </span>
+                    )}
                   </div>
 
                   {/* City */}
@@ -326,7 +408,7 @@ const Payment = () => {
                     </label>
                     <select
                       id="city"
-                      className="payment-address__input"
+                      className={`payment-address__input ${formErrors.city ? 'error' : ''}`}
                       value={formData.city}
                       onChange={handleCityChange}
                       required>
@@ -345,7 +427,7 @@ const Payment = () => {
                     </label>
                     <select
                       id="district"
-                      className="payment-address__input"
+                      className={`payment-address__input ${formErrors.district ? 'error' : ''}`}
                       value={formData.district}
                       onChange={handleDistrictChange}
                       required
@@ -365,7 +447,7 @@ const Payment = () => {
                     </label>
                     <select
                       id="ward"
-                      className="payment-address__input"
+                      className={`payment-address__input ${formErrors.ward ? 'error' : ''}`}
                       value={formData.ward}
                       onChange={handleWardChange}
                       required
@@ -386,7 +468,7 @@ const Payment = () => {
                     <input
                       type="text"
                       id="details"
-                      className="payment-address__input"
+                      className={`payment-address__input ${formErrors.details ? 'error' : ''}`}
                       value={formData.details}
                       onChange={handleInputChange}
                       required
@@ -427,7 +509,7 @@ const Payment = () => {
                   />
                 </div>
                 <div className="payment-shipper-method__label">
-                  <span className="payment-shipper-method__name">Giao hàng tiêu chuẩn: 32.000 đ</span>
+                  <span className="payment-shipper-method__name">Giao hàng tiêu chuẩn: 35.000 đ</span>
                 </div>
               </div>
             </section>
@@ -437,6 +519,11 @@ const Payment = () => {
                 <div className="payment-method__heading">
                   <h3 className="payment-method__title">Phương thức thanh toán</h3>
                 </div>
+                {addressError && (
+                  <div style={{ color: 'red', marginBottom: '10px' }}>
+                    {addressError}
+                  </div>
+                )}
                 <div className="payment-method__body">
                   <div className="payment-method__select">
                     <input

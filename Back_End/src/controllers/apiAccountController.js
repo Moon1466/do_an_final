@@ -79,8 +79,8 @@ const adminLogin = async (req, res) => {
             });
         }
 
-        // Kiểm tra role admin
-        if (account.role !== 'admin') {
+        // Kiểm tra role admin hoặc staff
+        if (!['admin', 'staff'].includes(account.role)) {
             return res.status(403).json({
                 success: false,
                 message: 'Bạn không có quyền truy cập trang quản trị'
@@ -120,7 +120,23 @@ const adminLogin = async (req, res) => {
 // Lấy danh sách tài khoản
 const getAllAccounts = async (req, res) => {
     try {
-        const accounts = await Account.find({});
+        const { search, role } = req.query;
+        let query = {};
+
+        // Tìm kiếm theo tên
+        if (search) {
+            query.$or = [
+                { username: { $regex: search, $options: 'i' } },
+                { fullName: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Lọc theo vai trò
+        if (role && role !== 'all') {
+            query.role = role;
+        }
+
+        const accounts = await Account.find(query);
         res.json({
             success: true,
             accounts: accounts
@@ -191,6 +207,14 @@ const createAccount = async (req, res) => {
     try {
         const { username, email, password, fullName, phone, role, address } = req.body;
         
+        // Validate role
+        if (role && !['admin', 'staff'].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vai trò không hợp lệ. Chỉ chấp nhận admin hoặc staff'
+            });
+        }
+
         // Kiểm tra định dạng file nếu có
         if (req.file) {
             const allowedFormats = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
@@ -268,6 +292,14 @@ const updateAccount = async (req, res) => {
     try {
         const { username, password, email, fullName, phone, role, address } = req.body;
         const accountId = req.params.id;
+
+        // Validate role
+        if (role && !['admin', 'staff'].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Vai trò không hợp lệ. Chỉ chấp nhận admin hoặc staff'
+            });
+        }
 
         // Kiểm tra tài khoản tồn tại
         const existingAccount = await Account.findById(accountId);
@@ -353,6 +385,50 @@ const deleteAccount = async (req, res) => {
     }
 };
 
+// Đổi mật khẩu
+const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const accountId = req.params.id;
+
+        // Tìm tài khoản theo ID
+        const account = await Account.findById(accountId);
+        if (!account) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy tài khoản'
+            });
+        }
+
+        // Kiểm tra mật khẩu hiện tại
+        const isPasswordValid = await bcrypt.compare(currentPassword, account.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Mật khẩu hiện tại không đúng'
+            });
+        }
+
+        // Hash mật khẩu mới
+        const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+        // Cập nhật mật khẩu mới
+        account.password = hashedNewPassword;
+        await account.save();
+
+        res.json({
+            success: true,
+            message: 'Đổi mật khẩu thành công'
+        });
+    } catch (error) {
+        console.error('Error changing password:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Có lỗi xảy ra khi đổi mật khẩu'
+        });
+    }
+};
+
 module.exports = {
     login,
     adminLogin,
@@ -360,5 +436,6 @@ module.exports = {
     getAccountById,
     createAccount,
     updateAccount,
-    deleteAccount
+    deleteAccount,
+    changePassword
 }; 

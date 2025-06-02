@@ -1,0 +1,119 @@
+// Users Collection
+Table users {
+  id ObjectId [pk]
+  email String [unique]
+  password String
+  fullName String
+  phone String
+  address String
+  role String
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+// Books Collection
+Table books {
+  id ObjectId [pk]
+  title String
+  author String
+  categoryId ObjectId
+  price Decimal
+  discount Decimal
+  stock Int
+  description String
+  images String[]
+  publisher String
+  publishedDate DateTime
+  pages Int
+  language String
+  isbn String
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+// Categories Collection
+Table categories {
+  id ObjectId [pk]
+  name String
+  description String
+  slug String
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+// Orders Collection
+Table orders {
+  id ObjectId [pk]
+  userId ObjectId
+  totalAmount Decimal
+  shippingFullName String
+  shippingPhone String
+  shippingAddress String
+  shippingCity String
+  paymentMethod String
+  paymentStatus String
+  orderStatus String
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+// Order Items Collection
+Table orderItems {
+  id ObjectId [pk]
+  orderId ObjectId
+  bookId ObjectId
+  quantity Int
+  price Decimal
+  createdAt DateTime
+}
+
+// Cart Collection
+Table cart {
+  id ObjectId [pk]
+  userId ObjectId
+  createdAt DateTime
+  updatedAt DateTime
+}
+
+// Cart Items Collection
+Table cartItems {
+  id ObjectId [pk]
+  cartId ObjectId
+  bookId ObjectId
+  quantity Int
+  createdAt DateTime
+}
+
+// Ratings Collection
+Table ratings {
+  id ObjectId [pk]
+  userId ObjectId
+  bookId ObjectId
+  rating Int
+  comment String
+  createdAt DateTime
+}
+
+// Settings Collection
+Table settings {
+  id ObjectId [pk]
+  storeName String
+  address String
+  phone String
+  email String
+  facebook String
+  twitter String
+  instagram String
+  updatedAt DateTime
+}
+
+// Relationships
+Ref: books.categoryId > categories.id
+Ref: orders.userId > users.id
+Ref: orderItems.orderId > orders.id
+Ref: orderItems.bookId > books.id
+Ref: cart.userId > users.id
+Ref: cartItems.cartId > cart.id
+Ref: cartItems.bookId > books.id
+Ref: ratings.userId > users.id
+Ref: ratings.bookId > books.id 

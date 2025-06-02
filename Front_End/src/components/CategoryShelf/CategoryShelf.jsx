@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import "../Filter/Filter.scss";
+import "./CategoryShelf.scss";
 
 const CategoryShelf = ({ title = "Danh mục sách", viewAllLink = "/categories" }) => {
   const [categories, setCategories] = useState([]);
@@ -49,28 +50,30 @@ const CategoryShelf = ({ title = "Danh mục sách", viewAllLink = "/categories"
     <div className="category-shelf">
       <div className="container">
         <div className="category-shelf__header">
-          <h2>{title}</h2>
+          <h2 className="category-shelf__title">{title}</h2>
           <Link to={viewAllLink} className="view-all">
             Xem tất cả
-            <i className="fas fa-angle-right" style={{ marginLeft: "5px" }}></i>
+            <i className="fas fa-angle-right"></i>
           </Link>
         </div>
 
-        <div className="category-shelf__items">
-          {categories.map((category) => (
-            <Link key={category._id} to={`/category/${category._id}`} className="category-card">
-              <div className="category-card__image">
-                {category.image ? (
-                  <img src={category.image} alt={category.name} />
-                ) : (
-                  <i className="fas fa-book" style={{ fontSize: "2rem", color: "#6a11cb" }}></i>
-                )}
-              </div>
-              <div className="category-card__content">
-                <h3>{category.name}</h3>
-              </div>
-            </Link>
-          ))}
+        <div className="category-products">
+          <div className="products-container">
+            {categories.map((category) => (
+              <Link key={category._id} to={`/category/${category._id}`} className="product-card">
+                <div className="product-image">
+                  {category.image ? (
+                    <img src={category.image} alt={category.name} />
+                  ) : (
+                    <i className="fas fa-book"></i>
+                  )}
+                </div>
+                <div className="product-info">
+                  <h3 className="product-name">{category.name}</h3>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>

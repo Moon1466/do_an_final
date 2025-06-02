@@ -358,4 +358,14 @@ document.addEventListener('DOMContentLoaded', function() {
             editModal.style.display = 'none';
         }
     };
+
+    const logoutForm = document.querySelector('form[action="/logout"]');
+    if (logoutForm) {
+        logoutForm.addEventListener('submit', function() {
+            // Xóa cookie user phía client
+            document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            // Nếu bạn lưu user ở localStorage, hãy xóa luôn:
+            localStorage.removeItem('user');
+        });
+    }
 }); 

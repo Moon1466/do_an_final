@@ -1,0 +1,13 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID đơn hàng
+2	userId	ObjectId	FK	ID người dùng
+3	totalAmount	Decimal		Tổng giá trị đơn hàng
+4	shippingFullName	String		Tên người nhận
+5	shippingPhone	String		SĐT người nhận
+6	shippingAddress	String		Địa chỉ giao hàng
+7	shippingCity	String		Thành phố
+8	paymentMethod	String		Phương thức thanh toán
+9	paymentStatus	String		Trạng thái thanh toán
+10	orderStatus	String		Trạng thái đơn hàng
+11	createdAt	DateTime		Ngày tạo
+12	updatedAt	DateTime		Ngày cập nhật 

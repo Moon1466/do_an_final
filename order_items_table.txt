@@ -1,0 +1,7 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID chi tiết đơn hàng
+2	orderId	ObjectId	FK	ID đơn hàng
+3	bookId	ObjectId	FK	ID sách
+4	quantity	Int		Số lượng
+5	price	Decimal		Giá tại thời điểm mua
+6	createdAt	DateTime		Ngày tạo 

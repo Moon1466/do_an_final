@@ -1,0 +1,10 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID người dùng
+2	email	String	Unique	Email đăng nhập
+3	password	String		Mật khẩu đã mã hóa
+4	fullName	String		Họ tên người dùng
+5	phone	String		Số điện thoại
+6	address	String		Địa chỉ
+7	role	String		Vai trò (admin/user)
+8	createdAt	DateTime		Ngày tạo tài khoản
+9	updatedAt	DateTime		Ngày cập nhật 

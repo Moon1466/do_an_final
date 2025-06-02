@@ -3,6 +3,7 @@ const Category = require('../model/Categories');
 const Order = require('../model/Orders');
 const User = require('../model/Accounts');
 const Settings = require('../model/Settings');
+const bcrypt = require('bcrypt');
 
 const getHome = async (req, res) => {
     try {
@@ -134,7 +135,8 @@ const getHome = async (req, res) => {
                 return monthData ? monthData.total : 0;
             }),
             orderStatusCount: simplifiedOrderStatus,
-            recentOrders: formattedRecentOrders
+            recentOrders: formattedRecentOrders,
+            adminName: req.user.fullName || req.user.username
         });
     } catch (error) {
         console.error('Lỗi khi tải trang Dashboard:', error);
@@ -157,7 +159,8 @@ const getHome = async (req, res) => {
                 'Hoàn thành': 0,
                 'Đã hủy': 0
             },
-            recentOrders: []
+            recentOrders: [],
+            adminName: req.user?.fullName || req.user?.username || 'Admin'
         });
     }
 }
@@ -192,7 +195,8 @@ const getProduct = async (req, res) => {
             categories: allCategories,
             parentCategories,
             childCategories,
-            searchTerm: req.query.search || ''
+            searchTerm: req.query.search || '',
+            adminName: req.user?.fullName || req.user?.username || 'Admin'
         });
     } catch (error) {
         res.render('product', { 
@@ -201,17 +205,183 @@ const getProduct = async (req, res) => {
             parentCategories: [],
             childCategories: [],
             searchTerm: req.query.search || '',
-            error: 'Có lỗi xảy ra khi tìm kiếm sản phẩm'
+            error: 'Có lỗi xảy ra khi tìm kiếm sản phẩm',
+            adminName: req.user?.fullName || req.user?.username || 'Admin'
         });
     }
 }
 
-const getOrder = (req, res) => {
-    res.render('order');
+const getOrder = async (req, res) => {
+    try {
+        // Kiểm tra session
+        if (!req.session || !req.session.user) {
+            return res.redirect('/login');
+        }
+
+        let query = {};
+        
+        // Xử lý tìm kiếm
+        if (req.query.search) {
+            query.$or = [
+                { orderCode: { $regex: new RegExp(req.query.search, 'i') } },
+                { 'customer.name': { $regex: new RegExp(req.query.search, 'i') } },
+                { 'customer.phone': { $regex: new RegExp(req.query.search, 'i') } }
+            ];
+        }
+
+        // Xử lý lọc theo trạng thái
+        if (req.query.status) {
+            if (req.query.status === 'processing') {
+                query.status = { $in: ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao hàng'] };
+            } else if (req.query.status === 'completed') {
+                query.status = 'Đã giao hàng';
+            } else if (req.query.status === 'cancelled') {
+                query.status = 'Đã hủy';
+            }
+        }
+
+        // Xử lý lọc theo trạng thái thanh toán
+        if (req.query.paymentStatus) {
+            query.paymentStatus = req.query.paymentStatus;
+        }
+
+        // Phân trang
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        // Lấy danh sách đơn hàng
+        const orders = await Order.find(query)
+            .populate('customer._id', 'name email phone')
+            .populate('products.productId', 'name price images')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        // Tính tổng số đơn hàng để phân trang
+        const totalOrders = await Order.countDocuments(query);
+        const totalPages = Math.ceil(totalOrders / limit);
+
+        // Format đơn hàng để hiển thị
+        const formattedOrders = orders.map(order => ({
+            _id: order._id,
+            orderCode: order.orderCode,
+            customer: {
+                name: order.customer.name,
+                email: order.customer.email,
+                phone: order.customer.phone,
+                address: order.customer.address
+            },
+            products: order.products.map(product => ({
+                name: product.name,
+                price: product.price.toLocaleString('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND'
+                }),
+                quantity: product.quantity,
+                image: product.image,
+                subtotal: (product.price * product.quantity).toLocaleString('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND'
+                })
+            })),
+            totalAmount: order.totalAmount.toLocaleString('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }),
+            status: order.status,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: order.paymentStatus,
+            createdAt: new Date(order.createdAt).toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }),
+            statusClass: getStatusClass(order.status),
+            paymentStatusClass: getPaymentStatusClass(order.paymentStatus),
+            notes: order.notes || ''
+        }));
+
+        // Lấy thống kê
+        const orderStats = {
+            total: totalOrders,
+            processing: await Order.countDocuments({ 
+                status: { $in: ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao hàng'] }
+            }),
+            completed: await Order.countDocuments({ status: 'Đã giao hàng' }),
+            cancelled: await Order.countDocuments({ status: 'Đã hủy' }),
+            paid: await Order.countDocuments({ paymentStatus: 'Đã thanh toán' }),
+            unpaid: await Order.countDocuments({ paymentStatus: 'Chưa thanh toán' })
+        };
+
+        res.render('order', {
+            orders: formattedOrders,
+            currentPage: page,
+            totalPages,
+            orderStats,
+            searchTerm: req.query.search || '',
+            statusFilter: req.query.status || '',
+            paymentStatusFilter: req.query.paymentStatus || '',
+            adminName: req.session.user.fullName || req.session.user.username,
+            adminRole: req.session.user.role,
+            adminAvatar: req.session.user.avatar || '/images/logo/logo_user_empty.png'
+        });
+
+    } catch (error) {
+        console.error('Error in getOrder:', error);
+        res.status(500).render('error', {
+            message: 'Có lỗi xảy ra khi tải trang đơn hàng',
+            adminName: req.session.user?.fullName || req.session.user?.username,
+            adminRole: req.session.user?.role,
+            adminAvatar: req.session.user?.avatar || '/images/logo/logo_user_empty.png'
+        });
+    }
+};
+
+// Hàm helper để xác định class CSS cho trạng thái đơn hàng
+function getStatusClass(status) {
+    switch (status) {
+        case 'Chờ xác nhận':
+            return 'status-pending';
+        case 'Đã xác nhận':
+            return 'status-confirmed';
+        case 'Đang giao hàng':
+            return 'status-shipping';
+        case 'Đã giao hàng':
+            return 'status-delivered';
+        case 'Đã hủy':
+            return 'status-cancelled';
+        default:
+            return '';
+    }
+}
+
+// Hàm helper để xác định class CSS cho trạng thái thanh toán
+function getPaymentStatusClass(paymentStatus) {
+    switch (paymentStatus) {
+        case 'Đã thanh toán':
+            return 'payment-paid';
+        case 'Chưa thanh toán':
+            return 'payment-unpaid';
+        default:
+            return '';
+    }
 }
 
 const getAccount = (req, res) => {
-    res.render('account');
+    // Kiểm tra session và quyền truy cập
+    if (!req.session || !req.session.user || !['admin', 'staff'].includes(req.session.user.role)) {
+        return res.redirect('/login');
+    }
+    
+    res.render('account', {
+        adminRole: req.session.user.role,
+        adminName: req.session.user.fullName || req.session.user.username,
+        adminAvatar: req.session.user.avatar || '/images/logo/logo_user_empty.png'
+    });
 }
 
 const getComment = async (req, res) => {
@@ -261,10 +431,54 @@ const getSetting = async (req, res) => {
     }
 }
 
+// Hiển thị trang đăng nhập
 const getLogin = (req, res) => {
+    // Nếu đã đăng nhập, chuyển hướng về trang home
+    if (req.session && req.session.user) {
+        return res.redirect('/home');
+    }
     res.render('login');
-}
- 
+};
+
+// Xử lý đăng nhập
+const postLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Tìm tài khoản theo email
+        const account = await User.findOne({ email });
+        if (!account) {
+            return res.render('login', { error: 'Email hoặc mật khẩu không đúng' });
+        }
+
+        // Kiểm tra mật khẩu
+        const isPasswordValid = await bcrypt.compare(password, account.password);
+        if (!isPasswordValid) {
+            return res.render('login', { error: 'Email hoặc mật khẩu không đúng' });
+        }
+
+        // Kiểm tra role admin hoặc staff
+        if (!['admin', 'staff'].includes(account.role)) {
+            return res.render('login', { error: 'Bạn không có quyền truy cập trang quản trị' });
+        }
+
+        // Lưu thông tin user vào session
+        req.session.user = {
+            _id: account._id,
+            username: account.username,
+            email: account.email,
+            fullName: account.fullName,
+            role: account.role,
+            avatar: account.avatar || '/images/logo/logo_user_empty.png'
+        };
+
+        // Chuyển hướng đến trang home
+        res.redirect('/home');
+    } catch (error) {
+        console.error('Login error:', error);
+        res.render('login', { error: 'Có lỗi xảy ra khi đăng nhập' });
+    }
+};
 
 module.exports = {
     getHome,
@@ -274,5 +488,6 @@ module.exports = {
     getComment,
     getCategory,
     getSetting,
-    getLogin
+    getLogin,
+    postLogin
 }

@@ -59,10 +59,10 @@ const ProductDetail = () => {
       return { avgRating, totalReviews };
     });
   }, []);
-  
-  // Thêm hàm showStockLimitMessage 
+
+  // Thêm hàm showStockLimitMessage
   const showStockLimitMessage = React.useCallback(() => {
-    toast.warning(`Số lượng đặt hàng đã đạt giới hạn tồn kho (${product?.stock || 0} sản phẩm)`);
+    toast.warning(`Số lượng đặt hàng đã đạt giới hạn tồn kho`);
   }, [product]);
 
   // Memoize các handler để giảm re-render
@@ -91,13 +91,13 @@ const ProductDetail = () => {
       user = JSON.parse(Cookies.get("user"));
     } catch (e) {
       // Hiển thị AuthModal thay vì tạo modal mới
-      setActionAfterAuth('add-to-cart');
+      setActionAfterAuth("add-to-cart");
       setShowAuthModal(true);
       return;
     }
-    
+
     if (!user || !(user._id || user.username)) {
-      setActionAfterAuth('add-to-cart');
+      setActionAfterAuth("add-to-cart");
       setShowAuthModal(true);
       return;
     }
@@ -138,6 +138,8 @@ const ProductDetail = () => {
 
       if (response.data && response.data.success) {
         toast.success("Đã thêm vào giỏ hàng!");
+        // Kích hoạt sự kiện để Header cập nhật giỏ hàng
+        document.dispatchEvent(new CustomEvent("cartUpdated"));
       } else {
         toast.error("Không thể thêm vào giỏ hàng. Vui lòng thử lại sau!");
       }
@@ -153,13 +155,13 @@ const ProductDetail = () => {
     try {
       user = JSON.parse(Cookies.get("user"));
     } catch (e) {
-      setActionAfterAuth('buy-now');
+      setActionAfterAuth("buy-now");
       setShowAuthModal(true);
       return;
     }
 
     if (!user || !(user._id || user.username)) {
-      setActionAfterAuth('buy-now');
+      setActionAfterAuth("buy-now");
       setShowAuthModal(true);
       return;
     }
@@ -193,9 +195,9 @@ const ProductDetail = () => {
   // Thêm hàm xử lý sau khi đăng nhập thành công
   const handleAuthSuccess = (userData) => {
     setShowAuthModal(false);
-    if (actionAfterAuth === 'add-to-cart') {
+    if (actionAfterAuth === "add-to-cart") {
       handleAddToCart();
-    } else if (actionAfterAuth === 'buy-now') {
+    } else if (actionAfterAuth === "buy-now") {
       handleBuyNow();
     }
     setActionAfterAuth(null);
@@ -504,10 +506,10 @@ const ProductDetail = () => {
         setLoadingLike(true);
 
         // Log để debug
-        console.log('Sending like request:', {
+        console.log("Sending like request:", {
           productId,
           reviewId,
-          userId: user.email
+          userId: user.email,
         });
 
         const response = await axios.put(
@@ -515,27 +517,27 @@ const ProductDetail = () => {
           { userId: user.email },
           {
             headers: {
-              Authorization: `Bearer ${Cookies.get("token")}`
-            }
+              Authorization: `Bearer ${Cookies.get("token")}`,
+            },
           }
         );
 
         if (response.data.success) {
-          setLocalReviews(prevReviews => 
-            prevReviews.map(review => {
+          setLocalReviews((prevReviews) =>
+            prevReviews.map((review) => {
               if (review._id === reviewId) {
                 return {
                   ...review,
                   likes: response.data.likesCount,
-                  likedBy: response.data.isLiked 
+                  likedBy: response.data.isLiked
                     ? [...(review.likedBy || []), user.email]
-                    : (review.likedBy || []).filter(email => email !== user.email)
+                    : (review.likedBy || []).filter((email) => email !== user.email),
                 };
               }
               return review;
             })
           );
-          
+
           toast.success(response.data.message);
         }
       } catch (error) {
@@ -547,18 +549,14 @@ const ProductDetail = () => {
     };
 
     // Thêm state để theo dõi tab đang active
-    const [activeTab, setActiveTab] = useState('newest'); // 'newest' hoặc 'mostLiked'
-    
+    const [activeTab, setActiveTab] = useState("newest"); // 'newest' hoặc 'mostLiked'
+
     // Tính toán danh sách reviews đã được sắp xếp
     const sortedReviews = React.useMemo(() => {
-      if (activeTab === 'newest') {
-        return [...localReviews].sort((a, b) => 
-          new Date(b.createdAt) - new Date(a.createdAt)
-        );
+      if (activeTab === "newest") {
+        return [...localReviews].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       } else {
-        return [...localReviews].sort((a, b) => 
-          (b.likedBy?.length || 0) - (a.likedBy?.length || 0)
-        );
+        return [...localReviews].sort((a, b) => (b.likedBy?.length || 0) - (a.likedBy?.length || 0));
       }
     }, [localReviews, activeTab]);
 
@@ -602,12 +600,12 @@ const ProductDetail = () => {
                             display: "inline-block",
                             width: 24,
                             height: 24,
-                            background: percent 
-                              ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)` 
+                            background: percent
+                              ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)`
                               : "#ccc",
                             WebkitMask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
                             mask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
-                            marginRight: 2
+                            marginRight: 2,
                           }}
                         />
                       );
@@ -655,16 +653,14 @@ const ProductDetail = () => {
               {/* Tabs */}
               <div className="comment__tabs">
                 <ul className="comment__list">
-                  <li 
-                    className={`comment__item ${activeTab === 'newest' ? 'comment__item--active' : ''}`}
-                    onClick={() => handleTabClick('newest')}
-                  >
+                  <li
+                    className={`comment__item ${activeTab === "newest" ? "comment__item--active" : ""}`}
+                    onClick={() => handleTabClick("newest")}>
                     Mới nhất
                   </li>
-                  <li 
-                    className={`comment__item ${activeTab === 'mostLiked' ? 'comment__item--active' : ''}`}
-                    onClick={() => handleTabClick('mostLiked')}
-                  >
+                  <li
+                    className={`comment__item ${activeTab === "mostLiked" ? "comment__item--active" : ""}`}
+                    onClick={() => handleTabClick("mostLiked")}>
                     Yêu thích nhất
                   </li>
                 </ul>
@@ -696,12 +692,13 @@ const ProductDetail = () => {
                                 display: "inline-block",
                                 width: 24,
                                 height: 24,
-                                background: star <= review.rating 
-                                  ? "#FFD700"  // Màu vàng cho sao được chọn
-                                  : "#ccc",    // Màu xám cho sao chưa chọn
+                                background:
+                                  star <= review.rating
+                                    ? "#FFD700" // Màu vàng cho sao được chọn
+                                    : "#ccc", // Màu xám cho sao chưa chọn
                                 WebkitMask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
                                 mask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
-                                marginRight: 2
+                                marginRight: 2,
                               }}
                             />
                           ))}
@@ -715,12 +712,11 @@ const ProductDetail = () => {
                                 review.likedBy?.includes(JSON.parse(Cookies.get("user"))?.email) ? "liked" : ""
                               }`}
                               onClick={() => handleToggleLike(id, review._id)}
-                              disabled={loadingLike}
-                            >
-                              <img 
-                                src="/src/assets/images/icon/like.svg" 
+                              disabled={loadingLike}>
+                              <img
+                                src="/src/assets/images/icon/like.svg"
                                 alt="Like"
-HayHay                                className={`like-icon ${
+                                className={`like-icon ${
                                   review.likedBy?.includes(JSON.parse(Cookies.get("user"))?.email) ? "liked" : ""
                                 }`}
                               />
@@ -900,12 +896,12 @@ HayHay                                className={`like-icon ${
                               display: "inline-block",
                               width: 24,
                               height: 24,
-                              background: percent 
-                                ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)` 
+                              background: percent
+                                ? `linear-gradient(90deg, #FFD700 ${percent}%, #ccc ${percent}%)`
                                 : "#ccc",
                               WebkitMask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
                               mask: "url(/src/assets/images/icon/star.svg) no-repeat center / contain",
-                              marginRight: 2
+                              marginRight: 2,
                             }}
                           />
                         );
@@ -913,11 +909,6 @@ HayHay                                className={`like-icon ${
                     </div>
                     {/* Comment */}
                     <span className="pd-dt-info__comment">({productRating.totalReviews} đánh giá)</span>
-                    {/* Quantity */}
-                    <div className="pd-dt-info__quantity">
-                      <p>Đã bán</p>
-                      <span className="pd-dt-info__quantity-sale">{product?.sold || 0}</span>
-                    </div>
                   </div>
 
                   {/* Price */}
@@ -971,7 +962,7 @@ HayHay                                className={`like-icon ${
                 </div>
                 {/* Quantity */}
                 <div className="pd-dt-qtt">
-                  <div className="pd-dt-qtt__span">Số lượng (Còn {product?.stock || 0} sản phẩm)</div>
+                  <div className="pd-dt-qtt__span">Số lượng </div>
                   <div className="pd-dt-qtt__act">
                     <button
                       type="button"
@@ -999,12 +990,8 @@ HayHay                                className={`like-icon ${
                       className="pd-dt-qtt__click"
                       onClick={handleIncrease} // Chỉ gọi handleIncrease
                       // Bỏ disabled để button luôn nhận được sự kiện click
-                      >
-                      <img
-                        src="/src/assets/images/icon/plus.webp"
-                        alt=""
-                        className="pd-dt-qtt__act-btn"
-                      />
+                    >
+                      <img src="/src/assets/images/icon/plus.webp" alt="" className="pd-dt-qtt__act-btn" />
                     </button>
                   </div>
                 </div>
@@ -1031,11 +1018,7 @@ HayHay                                className={`like-icon ${
       <CommentSection id={id} canReview={canReview} loadingCheck={loadingCheck} onRatingUpdate={updateProductRating} />
 
       {/* Thay thế modal cũ bằng AuthModal */}
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={handleCloseAuth}
-        onLoginSuccess={handleAuthSuccess}
-      />
+      <AuthModal isOpen={showAuthModal} onClose={handleCloseAuth} onLoginSuccess={handleAuthSuccess} />
     </div>
   );
 };

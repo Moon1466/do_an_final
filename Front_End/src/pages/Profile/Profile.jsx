@@ -3,6 +3,8 @@ import Cookies from "js-cookie";
 import axios from "axios";
 import "./Profile.scss";
 import { Link, useLocation } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const DEFAULT_AVATAR = "https://res.cloudinary.com/dcqyuixqu/image/upload/v1745775273/logo_user_empty_a971qi.png";
 
@@ -16,7 +18,6 @@ const Profile = () => {
   const [editUser, setEditUser] = useState(user);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [avatarFile, setAvatarFile] = useState(null);
   const location = useLocation();
 
@@ -33,7 +34,9 @@ const Profile = () => {
         };
         setUser(newUser);
         setEditUser(newUser);
-      } catch (e) {}
+      } catch (e) {
+        console.error("Error parsing user cookie:", e);
+      }
     }
   }, []);
 
@@ -44,13 +47,11 @@ const Profile = () => {
 
   const handleEdit = () => {
     setIsEditing(true);
-    setMessage("");
   };
 
   const handleCancel = () => {
     setEditUser(user);
     setIsEditing(false);
-    setMessage("");
   };
 
   const handleFileChange = (e) => {
@@ -63,25 +64,38 @@ const Profile = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage("");
     try {
-      // Lấy _id từ user cookie
       const userCookie = Cookies.get("user");
       let userId = "";
+      let currentUserData = {};
       if (userCookie) {
         try {
-          const userData = JSON.parse(userCookie);
-          userId = userData._id;
-        } catch {}
+          currentUserData = JSON.parse(userCookie);
+          userId = currentUserData._id;
+        } catch (err) {
+          console.error("Error parsing user cookie:", err);
+        }
       }
       if (!userId) {
-        setMessage("Không tìm thấy ID người dùng!");
+        toast.error("Không tìm thấy ID người dùng!");
         setLoading(false);
         return;
       }
+
+      // Kiểm tra xem có dữ liệu nào thay đổi không
+      const isDataChanged = 
+        editUser.fullName !== user.fullName ||
+        editUser.phone !== user.phone ||
+        avatarFile !== null;
+
+      if (!isDataChanged) {
+        toast.info("Không có dữ liệu nào được thay đổi!");
+        setLoading(false);
+        return;
+      }
+
       let res;
       if (avatarFile) {
-        // Nếu có file ảnh mới, gửi FormData
         const formData = new FormData();
         formData.append("fullName", editUser.fullName);
         formData.append("phone", editUser.phone);
@@ -92,27 +106,33 @@ const Profile = () => {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
-        // Nếu không có file, gửi JSON như cũ
         res = await axios.put(`/api/accounts/${userId}`, editUser, { withCredentials: true });
       }
       if (res.data.success) {
-        setUser(editUser);
-        Cookies.set("user", JSON.stringify({ ...editUser, _id: userId, avatar: res.data.account.avatar }), {
+        const updatedUser = {
+          ...currentUserData,
+          ...editUser,
+          avatar: res.data.account.avatar || editUser.avatar
+        };
+        setUser(updatedUser);
+        Cookies.set("user", JSON.stringify(updatedUser), {
           expires: 7,
         });
-        setMessage("Cập nhật thành công!");
+        toast.success("Cập nhật thành công!");
         setAvatarFile(null);
       } else {
-        setMessage("Cập nhật thất bại!");
+        toast.error("Cập nhật thất bại!");
       }
     } catch (err) {
-      setMessage("Có lỗi xảy ra khi cập nhật!");
+      console.error("Error updating profile:", err);
+      toast.error("Có lỗi xảy ra khi cập nhật!");
     }
     setLoading(false);
   };
 
   return (
     <div className="profile-container">
+      <ToastContainer position="top-right" autoClose={3000} />
       {/* Sidebar left */}
       <div className="profile-sidebar">
         <div className="avatar">
@@ -125,8 +145,8 @@ const Profile = () => {
           <li className={location.pathname === "/profile" ? "active" : ""}>
             <Link to="/profile">Thông tin tài khoản</Link>
           </li>
-          <li className={location.pathname === "/order-history" ? "active" : ""}>
-            <Link to="/order-history">Đổi mật khẩu</Link>
+          <li className={location.pathname === "/change-password" ? "active" : ""}>
+            <Link to="/change-password">Đổi mật khẩu</Link>
           </li>
           <li className={location.pathname === "/order-history" ? "active" : ""}>
             <Link to="/order-history">Đơn hàng của tôi</Link>
@@ -143,7 +163,7 @@ const Profile = () => {
             <label>Số điện thoại</label>
             <input type="text" name="phone" value={editUser.phone} onChange={handleChange} />
             <label>Email</label>
-            <input type="email" name="email" value={editUser.email} onChange={handleChange} required />
+            <input type="email" name="email" value={editUser.email} disabled />
             <label>Avatar</label>
             <input type="file" name="avatar" accept="image/*" onChange={handleFileChange} />
             {editUser.avatar && (
@@ -153,7 +173,6 @@ const Profile = () => {
                 style={{ width: 80, height: 80, borderRadius: "50%", marginTop: 8 }}
               />
             )}
-            {message && <div style={{ color: message.includes("thành công") ? "green" : "red" }}>{message}</div>}
             <div style={{ marginTop: 12 }}>
               <button type="submit" disabled={loading} className="btn profile-save-btn">
                 Lưu

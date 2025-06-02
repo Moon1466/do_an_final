@@ -1,0 +1,6 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID chi tiết giỏ hàng
+2	cartId	ObjectId	FK	ID giỏ hàng
+3	bookId	ObjectId	FK	ID sách
+4	quantity	Int		Số lượng
+5	createdAt	DateTime		Ngày tạo 

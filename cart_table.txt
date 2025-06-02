@@ -1,0 +1,5 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID giỏ hàng
+2	userId	ObjectId	FK	ID người dùng
+3	createdAt	DateTime		Ngày tạo
+4	updatedAt	DateTime		Ngày cập nhật 

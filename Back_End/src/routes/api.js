@@ -5,13 +5,14 @@ const Category = require('../model/Categories');
 const Product = require('../model/Products');
 const Account = require('../model/Accounts');
 const apiOrderController = require('../controllers/apiOrderController');
+const notificationController = require('../controllers/notificationController');
 const { storage } = require('../config/cloudinary');
 const multer = require('multer');
 const upload = multer({ storage });
 
 const { createCategory, getCategoriesAPI, getCategoriesbySlugPath , getCategoryById, updatedCategory  , deleteCategory} = require('../controllers/apiCategoryController');
 const { addProduct , getAllProducts, getProductById, updateProductStatus, deleteProduct, updateProduct, deleteSubImage, getProductBySlug, getProductsByCategory } = require('../controllers/apiProductController');
-const { createAccount, getAllAccounts, getAccountById, updateAccount, deleteAccount, login, adminLogin } = require('../controllers/apiAccountController');
+const { createAccount, getAllAccounts, getAccountById, updateAccount, deleteAccount, login, adminLogin, changePassword } = require('../controllers/apiAccountController');
 const apiCommentController = require('../controllers/apiCommentController');
 const basketController = require('../controllers/apiBasketController');
 const apiSettingController = require('../controllers/apiSettingController');
@@ -72,6 +73,7 @@ routerAPI.post('/account/login', login);
 routerAPI.post('/accounts/admin-login', adminLogin); // Admin login endpoint
 routerAPI.put('/accounts/:id', upload.single('avatar'), updateAccount); // Cập nhật tài khoản
 routerAPI.delete('/accounts/:id', deleteAccount); // Xóa tài khoản
+routerAPI.put('/accounts/:id/change-password', changePassword); // Đổi mật khẩu
 
 // ------------ Order ------------------- //
 routerAPI.post('/orders/create', apiOrderController.createOrder);
@@ -96,5 +98,9 @@ routerAPI.post('/basket/update-quantity', basketController.updateQuantity); // T
 // ------------ Setting ------------------- //
 routerAPI.post('/setting/update', upload.single('logo'), apiSettingController.updateSetting);
 routerAPI.get('/setting', apiSettingController.getSetting);
+
+// ------------ Notifications ------------------- //
+routerAPI.get('/notifications/:userId', notificationController.getUserNotifications);
+routerAPI.put('/notifications/:notificationId/read', notificationController.markNotificationAsRead);
 
 module.exports = routerAPI;

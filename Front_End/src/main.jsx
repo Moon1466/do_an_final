@@ -12,6 +12,7 @@ import PaymentSuccess from "./pages/Payment/PaymentSuccess.jsx";
 import Profile from "./pages/Profile/Profile.jsx";
 import OrderHistory from "./pages/OrderHistory/OrderHistory.jsx";
 import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import ChangePassword from "./pages/Profile/ChangePassword.jsx";
 // Import global styles
 import "./styles/index.scss";
 
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
       {
         path: "/forgot-password",
         element: <ForgotPassword />,
+      },
+      {
+        path: "/change-password",
+        element: <ChangePassword />,
       },
     ],
   },

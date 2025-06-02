@@ -1,16 +1,33 @@
 const Order = require('../model/Orders');
 const Product = require('../model/Products');
 const mongoose = require('mongoose');
+const { createNotification } = require('./notificationController');
 
 const getOrders = async (req, res) => {
     try {
+        let query = {};
+        
+        // Xử lý tìm kiếm theo mã đơn hàng
+        if (req.query.search) {
+            query.orderCode = { 
+                $regex: new RegExp(req.query.search, 'i')
+            };
+        }
+
+        // Xử lý lọc theo trạng thái
+        if (req.query.status && req.query.status !== 'all') {
+            query.status = req.query.status;
+        }
+
         // Lấy tất cả đơn hàng và sắp xếp theo thời gian tạo mới nhất
-        const orders = await Order.find().sort({ createdAt: -1 });
+        const orders = await Order.find(query).sort({ createdAt: -1 });
         
         // Render trang order với dữ liệu đơn hàng
         res.render('order', { 
             orders: orders,
-            moment: require('moment') // Để format thời gian
+            moment: require('moment'), // Để format thời gian
+            currentSearch: req.query.search || '',
+            currentStatus: req.query.status || 'all'
         });
     } catch (error) {
         console.error('Error getting orders:', error);
@@ -57,6 +74,15 @@ const createOrder = async (req, res) => {
         // Tạo đơn hàng mới
         const newOrder = new Order(orderData);
         await newOrder.save();
+
+        // Tạo thông báo cho người dùng
+        await createNotification(
+            orderData.customer._id,
+            'Đặt hàng thành công',
+            `Đơn hàng ${orderData.orderCode} đã được tạo thành công. Chúng tôi sẽ sớm xử lý đơn hàng của bạn.`,
+            'success'
+        );
+
         return res.status(201).json({
             success: true,
             message: 'Tạo đơn hàng thành công',
@@ -64,6 +90,17 @@ const createOrder = async (req, res) => {
         });
     } catch (error) {
         console.error('Error creating order:', error);
+        
+        // Tạo thông báo lỗi nếu có userId
+        if (req.body.customer && req.body.customer._id) {
+            await createNotification(
+                req.body.customer._id,
+                'Đặt hàng thất bại',
+                'Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại sau.',
+                'error'
+            );
+        }
+
         return res.status(500).json({
             success: false,
             message: 'Lỗi khi tạo đơn hàng',
@@ -204,11 +241,44 @@ const updateOrderStatus = async (req, res) => {
         // Cập nhật trạng thái đơn hàng
         order.status = status;
         
-        // Nếu đơn hàng được xác nhận hoặc đang giao, hoặc đã giao => đã thanh toán
-        if (status === 'Đã xác nhận' || status === 'Đang giao hàng' || status === 'Đã giao hàng') {
-            order.paymentStatus = 'Đã thanh toán';
+        // Tạo thông báo dựa trên trạng thái mới
+        let notificationTitle = '';
+        let notificationMessage = '';
+        let notificationType = 'info';
+
+        switch (status) {
+            case 'Đã xác nhận':
+                notificationTitle = 'Đơn hàng đã được xác nhận';
+                notificationMessage = `Đơn hàng ${order.orderCode} đã được xác nhận.`;
+                notificationType = 'success';
+                break;
+            case 'Đang giao hàng':
+                notificationTitle = 'Đơn hàng đang được giao';
+                notificationMessage = `Đơn hàng ${order.orderCode} đang được giao đến bạn.`;
+                notificationType = 'info';
+                break;
+            case 'Đã giao hàng':
+                notificationTitle = 'Đơn hàng đã giao thành công';
+                notificationMessage = `Đơn hàng ${order.orderCode} đã được giao thành công.`;
+                notificationType = 'success';
+                break;
+            case 'Đã hủy':
+                notificationTitle = 'Đơn hàng đã bị hủy';
+                notificationMessage = `Đơn hàng ${order.orderCode} đã bị hủy.`;
+                notificationType = 'error';
+                break;
         }
-        
+
+        // Tạo thông báo cho người dùng
+        if (order.customer && order.customer._id) {
+            await createNotification(
+                order.customer._id,
+                notificationTitle,
+                notificationMessage,
+                notificationType
+            );
+        }
+
         await order.save();
 
         return res.status(200).json({

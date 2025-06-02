@@ -13,9 +13,15 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
   <title>Home</title>
+  <script src="/js/auth.js"></script>
 </head>
 
 <body>
+  <!-- Toast notification -->
+  <div id="toast" class="toast">
+    <div class="toast__message"></div>
+  </div>
+  
   <div class="dashboard">
     <div class="container">
       <div class="dashboard__inner">
@@ -24,7 +30,7 @@
           <div class="dashboard-sidebar__wrapper">
             <!-- Header -->
             <div class="dashboard-sidebar__header">
-              <img src="images/logo/logo.svg" alt="" class="dashboard-sidebar__img" />
+              <img src="images/logo/logo.svg" alt="Logo" class="dashboard-sidebar__img" />
             </div>
             <!-- Body -->
             <div class="dashboard-sidebar__body">
@@ -53,12 +59,14 @@
                     <span class="dashboard-sidebar__text">Thanh toán</span>
                   </a>
                 </li>
+                <% if (adminRole === 'admin') { %>
                 <li class="dashboard-sidebar__item">
                   <a href="/account" class="dashboard-sidebar__link">
                     <img src="images/icons/account.svg" alt="" class="dashboard-sidebar__icon" />
                     <span class="dashboard-sidebar__text">Tài khoản</span>
                   </a>
                 </li>
+                <% } %>
                 <li class="dashboard-sidebar__item">
                   <a href="/setting" class="dashboard-sidebar__link">
                     <img src="images/icons/setting.svg" alt="" class="dashboard-sidebar__icon" />
@@ -66,6 +74,18 @@
                   </a>
                 </li>
               </ul>
+            </div>
+            <!-- Footer Sidebar -->
+            <div class="dashboard-sidebar__footer" style="margin-top:auto; padding: 24px 0 12px 0; text-align:center;">
+              <div style="display:flex; flex-direction:column; align-items:center;">
+                <img src="<%= adminAvatar %>" alt="Admin Avatar" style="width:40px; height:40px; border-radius:50%; margin-bottom:4px;">
+                <div style="font-weight:600; font-size:16px;"><%= adminName %></div>
+                <form action="/logout" method="POST" style="margin-top:10px;">
+                  <button type="submit" class="btn-logout" style="margin-top:8px; padding:6px 18px; border-radius:6px; background:#f44336; color:#fff; border:none; cursor:pointer;">
+                    <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -92,6 +112,14 @@
                       <img src="images/icons/filter.svg" alt="" class="account__act-icon" />
                       <span class="account__text">Lọc</span>
                     </button>
+                    <div class="account__filter-dropdown" id="filterDropdown">
+                      <div class="account__filter-header">Vai trò</div>
+                      <div class="account__filter-options">
+                        <a href="/account" class="account__filter-option <%= !locals.roleFilter ? 'active' : '' %>">Tất cả</a>
+                        <a href="/account?role=admin" class="account__filter-option <%= locals.roleFilter === 'admin' ? 'active' : '' %>">Quản trị viên</a>
+                        <a href="/account?role=staff" class="account__filter-option <%= locals.roleFilter === 'staff' ? 'active' : '' %>">Nhân viên</a>
+                      </div>
+                    </div>
                   </div>
                   <button class="account__act" id="addaccount">
                     <img src="images/icons/add.svg" alt="" class="account__act-icon" />
@@ -106,6 +134,7 @@
                   <div class="account__label">Ảnh đại diện</div>
                   <div class="account__label">Tên tài khoản</div>
                   <div class="account__label">Thông tin</div>
+                  <div class="account__label">Vai trò</div>
                   <div class="account__label">Thao tác</div>
                 </div>
                 <div class="account__main">
@@ -122,6 +151,9 @@
                       </div>
                       <div class="account__info">
                         <div class="account__phone"><%= user.phone %></div>
+                      </div>
+                      <div class="account__role">
+                        <%= user.role === 'admin' ? 'Quản trị viên' : user.role === 'staff' ? 'Nhân viên' : user.role %>
                       </div>
                       <div class="account__actions">
                         <button class="account__edit-btn" data-id="<%= user._id %>">
@@ -208,7 +240,13 @@
               <input type="tel" name="phone" class="modal__input" required placeholder="Nhập số điện thoại" />
             </div>
 
-            <input type="hidden" name="role" value="admin" />
+            <div class="modal__group">
+              <label class="modal__label">Vai trò</label>
+              <select name="role" class="modal__input" required>
+                <option value="admin">Quản trị viên</option>
+                <option value="staff">Nhân viên</option>
+               </select>
+            </div>
           </div>
 
           <div class="modal__separator"></div>
@@ -303,7 +341,13 @@
               <input type="tel" name="phone" class="modal__input" required placeholder="Nhập số điện thoại" />
             </div>
 
-            <input type="hidden" name="role" value="admin" />
+            <div class="modal__group">
+              <label class="modal__label">Vai trò</label>
+              <select name="role" class="modal__input" required>
+                <option value="admin">Quản trị viên</option>
+                <option value="staff">Nhân viên</option>
+              </select>
+            </div>
           </div>
 
           <div class="modal__separator"></div>
@@ -351,10 +395,106 @@
 
         deleteButtons.forEach(btn => {});
       });
+
+      document.addEventListener('DOMContentLoaded', function() {
+        const logoutForm = document.querySelector('form[action="/admin/logout"]');
+        if (logoutForm) {
+          logoutForm.addEventListener('submit', function() {
+            // Xóa cookie user phía client
+            document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            // Nếu bạn lưu user ở localStorage, hãy xóa luôn:
+            localStorage.removeItem('user');
+          });
+        }
+      });
     </script>
     <script src="/js/account.js"></script>
     <script src="/js/address.js"></script>
   </div>
+
+  <style>
+    .account__filter {
+      position: relative;
+    }
+
+    .account__filter-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 200px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      margin-top: 4px;
+    }
+
+    .account__filter-header {
+      padding: 12px 16px;
+      font-weight: 600;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .account__filter-options {
+      padding: 8px 0;
+    }
+
+    .account__filter-option {
+      display: block;
+      padding: 8px 16px;
+      color: #1e293b;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .account__filter-option:hover {
+      background: #f1f5f9;
+    }
+
+    .account__filter-option.active {
+      background: #e2e8f0;
+      color: #2563eb;
+    }
+
+    /* Hiển thị dropdown khi có class show */
+    .account__filter-dropdown.show {
+      display: block;
+    }
+  </style>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterButton = document.getElementById('filterButton');
+    const filterDropdown = document.getElementById('filterDropdown');
+
+    // Toggle dropdown khi click vào nút filter
+    filterButton.addEventListener('click', function(e) {
+      e.stopPropagation();
+      filterDropdown.classList.toggle('show');
+    });
+
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener('click', function(e) {
+      if (!filterDropdown.contains(e.target) && !filterButton.contains(e.target)) {
+        filterDropdown.classList.remove('show');
+      }
+    });
+
+    // Giữ lại tham số search khi lọc
+    const searchParams = new URLSearchParams(window.location.search);
+    const searchTerm = searchParams.get('search');
+    
+    if (searchTerm) {
+      document.querySelectorAll('.account__filter-option').forEach(option => {
+        const href = new URL(option.href);
+        href.searchParams.set('search', searchTerm);
+        option.href = href.toString();
+      });
+    }
+  });
+  </script>
 </body>
 
 </html>

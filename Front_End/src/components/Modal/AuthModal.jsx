@@ -12,14 +12,22 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
     fullName: "",
-    phone: "",
   });
   const [error, setError] = useState("");
   const [settings, setSettings] = useState(null);
   const [remember, setRemember] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+  const [formErrors, setFormErrors] = useState({
+    username: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
 
   useEffect(() => {
     fetch("/api/setting")
@@ -27,17 +35,55 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       .then((data) => setSettings(data));
   }, []);
 
-  const handleChange = (e) => {
+  // Validate Vietnamese phone number
+  const validatePhone = (phone) => {
+    const phoneRegex = /^(0|84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+    return phoneRegex.test(phone);
+  };
+
+  // Validate Gmail address
+  const validateEmail = (email) => {
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    return gmailRegex.test(email);
+  };
+
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    let newValue = value;
+    let error = "";
+
+    // Phone number validation
+    if (name === "phone") {
+      newValue = value.replace(/[^\d]/g, '');
+      if (newValue && !validatePhone(newValue)) {
+        error = "Số điện thoại không hợp lệ (VD: 0332339xxxx)";
+      }
+    }
+
+    // Email validation
+    if (name === "email") {
+      if (value && !validateEmail(value)) {
+        error = "Vui lòng nhập địa chỉ Gmail hợp lệ";
+      }
+    }
+
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: newValue
     }));
+
+    if (showErrors) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: error
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setShowErrors(true);
 
     if (isLogin) {
       // Xử lý đăng nhập
@@ -46,7 +92,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
           "http://localhost:3000/api/account/login",
           {
             email: formData.email,
-            password: formData.password,
+            password: formData.password
           },
           {
             withCredentials: true,
@@ -62,7 +108,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             fullName: response.data.account.fullName,
             role: response.data.account.role,
             avatar: response.data.account.avatar,
-            phone: response.data.account.phone || "",
+            phone: response.data.account.phone || ""
           };
           Cookies.set("user", JSON.stringify(userInfo), { expires: 7 });
           if (onLoginSuccess) onLoginSuccess(userInfo);
@@ -78,12 +124,61 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
         }
       } catch (error) {
         console.error("Login error:", error);
-        setError(error.response?.data?.message || "Đã có lỗi xảy ra khi đăng nhập");
+        setError(error.response?.data?.message || "Đã <div className="
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          "></div> lỗi xảy ra khi đăng nhập");
       }
     } else {
       // Xử lý đăng ký
       if (formData.password !== formData.confirmPassword) {
         setError("Mật khẩu xác nhận không khớp");
+        return;
+      }
+
+      // Validate all fields before submission
+      const errors = {
+        username: !formData.username ? "Vui lòng nhập tên đăng nhập" : "",
+        email: !formData.email ? "Vui lòng nhập email" : !validateEmail(formData.email) ? "Vui lòng nhập địa chỉ Gmail hợp lệ" : "",
+        phone: !formData.phone ? "Vui lòng nhập số điện thoại" : !validatePhone(formData.phone) ? "Số điện thoại không hợp lệ" : "",
+        password: !formData.password ? "Vui lòng nhập mật khẩu" : "",
+        confirmPassword: formData.password !== formData.confirmPassword ? "Mật khẩu không khớp" : ""
+      };
+
+      setFormErrors(errors);
+
+      // Check if there are any errors
+      if (Object.values(errors).some(error => error)) {
         return;
       }
 
@@ -112,7 +207,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             fullName: response.data.account.fullName,
             role: response.data.account.role,
             avatar: response.data.account.avatar,
-            phone: response.data.account.phone || "",
+            phone: response.data.account.phone || formData.phone || "",
           };
           Cookies.set("user", JSON.stringify(userInfo), { expires: 7 });
           if (onLoginSuccess) onLoginSuccess(userInfo);
@@ -132,6 +227,18 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
       }
     }
   };
+
+  // Reset showErrors when switching between login and register
+  useEffect(() => {
+    setShowErrors(false);
+    setFormErrors({
+      username: "",
+      email: "",
+      phone: "",
+      password: "",
+      confirmPassword: "",
+    });
+  }, [isLogin]);
 
   if (!isOpen) return null;
 
@@ -170,22 +277,24 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   type="email"
                   name="email"
                   placeholder="Email"
-                  className="auth-modal__input"
+                  className={`auth-modal__input ${showErrors && formErrors.email ? 'error' : ''}`}
                   value={formData.email}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
+                {showErrors && formErrors.email && <span className="auth-modal__error">{formErrors.email}</span>}
               </div>
               <div className="auth-modal__form-group">
                 <input
                   type="password"
                   name="password"
                   placeholder="Mật khẩu"
-                  className="auth-modal__input"
+                  className={`auth-modal__input ${showErrors && formErrors.password ? 'error' : ''}`}
                   value={formData.password}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
+                {showErrors && formErrors.password && <span className="auth-modal__error">{formErrors.password}</span>}
               </div>
               <div className="auth-modal__remember-row">
                 <label className="auth-modal__remember-label">
@@ -212,11 +321,12 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   type="text"
                   name="username"
                   placeholder="Tên đăng nhập"
-                  className="auth-modal__input"
+                  className={`auth-modal__input ${showErrors && formErrors.username ? 'error' : ''}`}
                   value={formData.username}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
+                {showErrors && formErrors.username && <span className="auth-modal__error">{formErrors.username}</span>}
               </div>
               <div className="auth-modal__form-group">
                 <input
@@ -225,7 +335,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   placeholder="Họ và tên"
                   className="auth-modal__input"
                   value={formData.fullName}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
               </div>
@@ -234,43 +344,47 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                   type="email"
                   name="email"
                   placeholder="Email"
-                  className="auth-modal__input"
+                  className={`auth-modal__input ${showErrors && formErrors.email ? 'error' : ''}`}
                   value={formData.email}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
+                {showErrors && formErrors.email && <span className="auth-modal__error">{formErrors.email}</span>}
               </div>
               <div className="auth-modal__form-group">
                 <input
                   type="tel"
                   name="phone"
-                  placeholder="Số điện thoại (không bắt buộc)"
-                  className="auth-modal__input"
+                  placeholder="Số điện thoại"
+                  className={`auth-modal__input ${showErrors && formErrors.phone ? 'error' : ''}`}
                   value={formData.phone}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                 />
+                {showErrors && formErrors.phone && <span className="auth-modal__error">{formErrors.phone}</span>}
               </div>
               <div className="auth-modal__form-group">
                 <input
                   type="password"
                   name="password"
                   placeholder="Mật khẩu"
-                  className="auth-modal__input"
+                  className={`auth-modal__input ${showErrors && formErrors.password ? 'error' : ''}`}
                   value={formData.password}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
+                {showErrors && formErrors.password && <span className="auth-modal__error">{formErrors.password}</span>}
               </div>
               <div className="auth-modal__form-group">
                 <input
                   type="password"
                   name="confirmPassword"
                   placeholder="Nhập lại mật khẩu"
-                  className="auth-modal__input"
+                  className={`auth-modal__input ${showErrors && formErrors.confirmPassword ? 'error' : ''}`}
                   value={formData.confirmPassword}
-                  onChange={handleChange}
+                  onChange={handleInputChange}
                   required
                 />
+                {showErrors && formErrors.confirmPassword && <span className="auth-modal__error">{formErrors.confirmPassword}</span>}
               </div>
               <button type="submit" className="auth-modal__submit">
                 Đăng ký

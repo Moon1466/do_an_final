@@ -87,13 +87,14 @@
 
   &__form-group {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
     margin-bottom: 1.2rem;
   }
 
   &__input {
-    width: 90%;
+    width: 100%;
     padding: 0.85rem 1rem;
     border: 1.5px solid #e3e3e3;
     border-radius: 10px;
@@ -104,8 +105,16 @@
     &:focus {
       outline: none;
       border-color: #1976d2;
-      box-shadow: 0 0 0 2px #e3f2fd;
-      background: #fff;
+      box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+    }
+
+    &.error {
+      border-color: #dc3545;
+      background-color: #fff;
+
+      &:focus {
+        box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
+      }
     }
   }
 
@@ -130,14 +139,11 @@
   }
 
   &__error {
+    display: block;
     color: #dc3545;
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    padding: 0.85rem 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.2rem;
-    font-size: 0.97rem;
-    text-align: center;
+    font-size: 1.2rem;
+    margin-top: 4px;
+    padding-left: 4px;
   }
 
   &__remember-row {

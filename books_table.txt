@@ -1,0 +1,17 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID sách
+2	title	String		Tên sách
+3	author	String		Tác giả
+4	categoryId	ObjectId	FK	ID danh mục
+5	price	Decimal		Giá sách
+6	discount	Decimal		Mức giảm giá
+7	stock	Int		Số lượng tồn kho
+8	description	String		Mô tả chi tiết
+9	images	Array[String]		Mảng URL hình ảnh
+10	publisher	String		Nhà xuất bản
+11	publishedDate	DateTime		Ngày xuất bản
+12	pages	Int		Số trang
+13	language	String		Ngôn ngữ
+14	isbn	String		Mã ISBN
+15	createdAt	DateTime		Ngày tạo
+16	updatedAt	DateTime		Ngày cập nhật 

@@ -1,0 +1,7 @@
+STT	Name	Type	Key	Mô tả
+1	_id	ObjectId	PK	ID đánh giá
+2	userId	ObjectId	FK	ID người dùng
+3	bookId	ObjectId	FK	ID sách
+4	rating	Int		Điểm đánh giá (1-5)
+5	comment	String		Nội dung đánh giá
+6	createdAt	DateTime		Ngày tạo 

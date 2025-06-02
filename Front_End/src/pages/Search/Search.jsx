@@ -89,6 +89,78 @@ const Search = () => {
     setSelectedPrice(range);
   };
 
+  const formatPrice = (price) => {
+    if (!price) return "0";
+    // Nếu price là string, chuyển về number
+    const numPrice = typeof price === 'string' ? parseFloat(price.replace(/[^\d]/g, '')) : price;
+    // Kiểm tra nếu không phải số hợp lệ
+    if (isNaN(numPrice)) return "0";
+    return new Intl.NumberFormat('vi-VN').format(numPrice);
+  };
+
+  const calculateDiscount = (originalPrice, salePrice) => {
+    if (!originalPrice || !salePrice) return null;
+    
+    // Chuyển đổi giá về số
+    const original = typeof originalPrice === 'string' ? 
+      parseFloat(originalPrice.replace(/[^\d]/g, '')) : originalPrice;
+    const sale = typeof salePrice === 'string' ? 
+      parseFloat(salePrice.replace(/[^\d]/g, '')) : salePrice;
+    
+    // Kiểm tra tính hợp lệ của giá
+    if (isNaN(original) || isNaN(sale) || original <= 0 || sale <= 0) return null;
+    if (original <= sale) return null;
+    
+    const discount = Math.round(((original - sale) / original) * 100);
+    return discount;
+  };
+
+  const renderProductCard = (product) => {
+    // Kiểm tra và lấy giá gốc
+    const originalPrice = product.price || product.originalPrice || 0;
+    // Tính giá sale nếu có
+    const salePrice = product.salePrice || (product.isSale ? 
+      originalPrice - (originalPrice * product.sale / 100) : originalPrice);
+    
+    const discount = calculateDiscount(originalPrice, salePrice);
+
+    return (
+      <Link to={`/product-detail/${product._id}`} className="product-card" key={product._id}>
+        <div className="product-card__image">
+          <img src={product.images?.[0] || product.image} alt={product.name} />
+        </div>
+        <div className="product-card__content">
+          <h3 className="product-card__title">{product.name}</h3>
+          <div className="product-card__price">
+            {salePrice && salePrice !== originalPrice ? (
+              <>
+                <div className="price-row">
+                  <span className="product-card__price--sale">
+                    {formatPrice(salePrice)}đ
+                  </span>
+                  {discount && (
+                    <span className="discount-tag">
+                      -{discount}%
+                    </span>
+                  )}
+                </div>
+                <span className="product-card__price--original">
+                  {formatPrice(originalPrice)}đ
+                </span>
+              </>
+            ) : (
+              <div className="price-row">
+                <span className="product-card__price--current">
+                  {formatPrice(originalPrice)}đ
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
   return (
     <div className="search-page">
       <div className="container search-page__layout">
@@ -143,28 +215,7 @@ const Search = () => {
               <div className="search-page__no-results">Không tìm thấy sản phẩm phù hợp với từ khóa "{searchTerm}"</div>
             ) : (
               <div className="search-page__products">
-                {products.map((product) => (
-                  <Link to={`/product-detail/${product._id}`} key={product._id} className="product-card">
-                    <div className="product-card__image">
-                      <img src={product.images[0]} alt={product.name} />
-                    </div>
-                    <div className="product-card__content">
-                      <h3 className="product-card__title">{product.name}</h3>
-                      <div className="product-card__price">
-                        {product.isSale ? (
-                          <>
-                            <span className="product-card__price--sale">
-                              {product.price - (product.price * product.sale) / 100}đ
-                            </span>
-                            <span className="product-card__price--original">{product.price}đ</span>
-                          </>
-                        ) : (
-                          <span>{product.price}đ</span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                {products.map((product) => renderProductCard(product))}
               </div>
             )}
           </div>

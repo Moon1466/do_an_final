@@ -113,11 +113,18 @@
       font-family: "Plus Jakarta Sans", sans-serif;
     }
 
-    & input {
+    & input, & select {
       border: 1px solid #e8edf5;
       border-radius: 8px;
       padding: 16px;
       font-size: 1.4rem;
+      width: 100%;
+      background: #fff;
+      
+      &:focus {
+        outline: none;
+        border-color: #0085db;
+      }
     }
 
     & + & {
@@ -600,5 +607,51 @@
     font-size: 1.4rem;
     font-weight: 500;
     font-family: "Plus Jakarta Sans", sans-serif;
+  }
+}
+
+// Toast notification
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  display: none;
+  animation: slideIn 0.3s ease-in-out;
+
+  &.show {
+    display: block;
+  }
+
+  &--error {
+    background: #fee2e2;
+    border-left: 4px solid #ef4444;
+    color: #991b1b;
+  }
+
+  &--success {
+    background: #dcfce7;
+    border-left: 4px solid #22c55e;
+    color: #166534;
+  }
+
+  &__message {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
   }
 }

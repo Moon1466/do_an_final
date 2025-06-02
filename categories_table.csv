@@ -1,0 +1,7 @@
+STT,Name,Type,Key,Mô tả
+1,_id,ObjectId,PK,ID danh mục
+2,name,String,,Tên danh mục
+3,description,String,,Mô tả danh mục
+4,slug,String,,Đường dẫn thân thiện SEO
+5,createdAt,DateTime,,Ngày tạo
+6,updatedAt,DateTime,,Ngày cập nhật 
